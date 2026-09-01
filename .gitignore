@@ -1,0 +1,32 @@
+# Recorded perioperative data (PHI) — Charité ethics approval. Never commit.
+data/
+
+# Raw physiological / recording formats, wherever they land
+*.parquet
+*.vital
+*.edf
+*.wfdb
+*.dat
+*.hea
+*.mat
+
+# Local agent instructions (not shared)
+CLAUDE.md
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Env / secrets
+.env
+.env.*
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
