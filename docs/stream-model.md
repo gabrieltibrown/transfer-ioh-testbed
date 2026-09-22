@@ -1,6 +1,10 @@
 # Stream model: PIC iX production feed, VitalDB, and the bridge between them
 
-Status: draft, sprint 01-02. Living document, revise when DWC or PIC iX access lands.
+Status: draft, sprint 01-02. Living document.
+
+**Revision 2**: the monitor's Data Export Interface was initially treated as the
+production feed. It is not (see 1.1). The 256 ms cadence is downgraded to a
+hypothesis; the rate ladder and wave object model survive.
 
 The testbed replays recorded Parquet in order to mock a live Philips waveform
 stream. Every number the thesis reports is therefore conditioned on how faithful
@@ -8,38 +12,87 @@ that mock is. This document states what the production feed looks like, where
 VitalDB differs, and exactly which transformations bridge the difference, so the
 fidelity claim is auditable rather than assumed.
 
-Three sources are used, and they are not equally authoritative:
-
-| Source | What it is | Authority |
+| Source | What it is | Authority for our path |
 |---|---|---|
-| Philips *Data Export Interface Programming Guide*, [part 453564588011](https://www.documents.philips.com/doclib/enc/fetch/2000/4504/577242/577243/577247/582636/582882/X2%2C_MP%2C_MX_&_FM_Series_Rel._L.0_Data_Export_Interface_Program._Guide_4535_645_88011_(ENG).pdf) (IntelliVue X2, MP/MX Series, Avalon FM Series; 339 pp, published 08/2015) | Vendor spec for the IntelliVue monitor wave/numeric export | Primary, quoted |
-| LIVIA `waveform_producer` replay code | Charite code emitting DWC `te_wave` rows to Kafka | Secondary, shows the DWC field set in practice |
+| [PIIC iX Release B.01 Technical Data Sheet](https://www.biyomar.com/uploads/katalog/monitor-cihazlari/piic-ix.pdf) (12 pp) | Lists PIIC iX's actual export interfaces | Primary for *which* interface carries waves |
+| Philips *Data Export Interface Programming Guide*, [part 453564588011](https://www.documents.philips.com/doclib/enc/fetch/2000/4504/577242/577243/577247/582636/582882/X2%2C_MP%2C_MX_&_FM_Series_Rel._L.0_Data_Export_Interface_Program._Guide_4535_645_88011_(ENG).pdf) (339 pp, 08/2015) | Spec for the monitor's *own* DEI, which is **not** our path (see 1.1) | Wave object model and rate ladder only. **Not** cadence |
+| LIVIA `real_waveform_producer.py` | Charite code emitting DWC `te_wave` rows to Kafka | Secondary, shows the DWC field set in practice |
 | Measurements on 50 cached VitalDB cases | This repo, `data/vitaldb/` | Primary for the VitalDB side |
+
+No public Philips document specifying DWC's `te_wave` schema or its delivery
+cadence was found. That is the central gap in this model.
 
 ## 1. What the production feed emits
 
-### 1.1 Caveat on which interface
+### 1.1 Which interface actually carries waves, and what that invalidates
 
-The quantitative detail below is authoritative for the **IntelliVue Data Export
-Interface**, the monitor's own export interface. The production path at Charite
-is PIC iX, the central station, and its egress may be HL7, Capsule MDIP, or the
-Data Warehouse Connect (DWC) warehouse export rather than DEI directly.
+**The monitor's Data Export Interface is not our path.** The DEI guide states:
 
-What supports carrying DEI numbers over to DWC: the DWC `te_wave` column set that
-LIVIA emits is close to a field-for-field persistence of the DEI wave object
-model, as section 1.7 shows. That is strong evidence the same underlying wave
-objects are being recorded. It is not proof that PIC iX re-emits them at the same
-cadence.
+> "The Data Export Interface of IntelliVue patient monitors cannot be accessed
+> via the Local Area Network when the monitor is connected to the Philips LAN,
+> e.g. to an Information Center (central station)."
 
-**Open question, cheap to settle:** the distribution of `c_n_samples` in
-`te_wave`. If it is 128/64/32/16, DWC is packet-faithful to the monitor and the
-model below transfers directly. Anything else means PIC iX or DWC re-aggregates,
-and section 3 needs revisiting. Ask the Charite integration team which egress
-feeds the pipeline, and run one query when access lands.
+and advises setting Central Monitoring to `Optional` when attaching a Computer
+Client. DEI is an *alternative to* central monitoring, not a path through it. The
+guide contains zero occurrences of "PIC iX", "DWC" or `te_wave`. In a deployment
+where monitors feed PIIC iX, DEI over LAN is unavailable by design.
 
-### 1.2 Wave delivery: 256 ms packets
+**What PIIC iX actually exports**, per its Technical Data Sheet:
 
-The core fact. From "Interpreting Wave Data":
+| Export | Carries | Nature |
+|---|---|---|
+| **Data Warehouse Connect** | "patient data, including **waves**, alarms, events, and trends (both admitted and discharged)... exported directly from surveillance PIIC iX stations to **long-term data storage**... designed for clinical research" | the only continuous-wave path |
+| HL7 Outbound | "All patient **numeric** data is exported via HL7." TCP/IP, v2.3/2.4/2.6 | numerics only, no waves |
+| Wave Strip Export | alarm and saved strips as `.png` images | episodic, not data |
+| Holter Export | ECG wave data, user-selected duration up to 96 h | bulk, episodic |
+| 12-Lead Export | diagnostic 12-lead as XML to cardiology systems | episodic |
+
+So **DWC is the only PIIC iX export that carries continuous waveforms**, and the
+data sheet frames it as a feed to long-term storage for research, giving no
+cadence or latency figure. PIIC iX handles real-time waves internally for display
+("up to 96 real-time waveforms per configured display"), but that is not an
+egress.
+
+This is consistent with the reference platform in proposal 2.3: Joachim et al.
+route DWC through Mirth Connect into Kafka and Flink, and the proposal itself
+notes that platform "was designed primarily for reliable data capture and
+retrospective use."
+
+**What survives from the DEI guide, and what does not.**
+
+*Survives*, because these are properties of the monitor's measurement modules and
+wave objects rather than of the transport, and both are independently corroborated
+by the DWC field set:
+- the sample-rate ladder 500 / 250 / 125 / 62.5 sps, i.e. `c_sample_period` in
+  {2, 4, 8, 16} ms. LIVIA's `c_hz = 1000 // c_sample_period` only makes sense
+  against exactly this set
+- the wave object model: scaled integers plus scale/calibration pairs, invalid
+  and unavailable sample index lists, per-observation validity state, sequence
+  numbers, label strings, physio ids. The `te_wave` columns map onto these almost
+  one to one (see 1.7)
+
+*Does not survive*: **the 256 ms update period**. That is a DEI poll-profile
+property. Nothing establishes that DWC writes packets at the same cadence, and
+DWC may well re-aggregate on its way to long-term storage.
+
+Note also the data sheet is Release B.01; Charite may run a later release.
+
+**Open questions, in priority order.** These now block a fidelity claim rather
+than merely refining one:
+
+1. Which interface feeds the Charite pipeline: DWC, Capsule MDIP, or something
+   else. Capsule MDIP is described by Philips as providing "live streaming data
+   to PIC iX" and to "100+ downstream systems", so it is the other candidate for
+   a genuinely real-time wave path
+2. The distribution of `c_n_samples` in `te_wave`. One query settles packet shape
+3. DWC's write cadence and end-to-end delay from bedside to warehouse row. If DWC
+   is a batch export, "mocking a real-time PIC iX stream" from it needs rethinking
+4. Whether DWC preserves the monitor's `sequence_no` as `c_sequence_number`
+
+### 1.2 Wave delivery cadence: 256 ms in the DEI, unconfirmed for DWC
+
+Treat this table as **the monitor's behaviour, and a hypothesis for DWC**, not as
+established fact for our path. From "Interpreting Wave Data":
 
 | Wave type | Sample period | Sample size | Array size | Update period | Bandwidth |
 |---|---|---|---|---|---|
