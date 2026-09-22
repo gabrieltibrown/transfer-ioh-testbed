@@ -244,6 +244,46 @@ streams, and that limitation is recorded here and in the sprint report.
 3. Whether DWC preserves `c_sequence_number` from the poll `sequence_no`
 4. Observed timestamp disorder in real DWC, which sets realistic T10 parameters
 
+## 3.4 What LIVIA's replay job tells us, and where it must not be copied
+
+`real_waveform_producer.py` replays exported DWC Parquet into `dwc-waveform`.
+It is a useful schema reference and a useful warning.
+
+**Evidence it provides.** It sets no rate: pacing comes entirely from
+`c_time_stamp_wave_sample` spacing. Two details are still informative.
+`c_hz = 1000 // c_sample_period` only makes sense against {2, 4, 8, 16} ms, the
+Philips ladder, and incidentally mislabels 62.5 sps as 62 Hz. And
+`MAX_BURST_PER_SEC = 20` per (patient, label) implies steady-state packet rate
+well below 20/s per signal, which rules out per-sample delivery and is
+consistent with 3.906/s from 256 ms packets.
+
+**Measured defect: relative-sleep pacing accumulates drift.** 400 concurrent
+streams at 256 ms cadence, serializing a 128-sample payload per tick:
+
+| Strategy | Overshoot per packet | Drift over a 3 h case |
+|---|---|---|
+| `await asyncio.sleep(gap)` | 1.480 ms | 62.4 s |
+| absolute deadline schedule | 0.007 ms | 0.3 s |
+
+62 s of harness drift sits inside the 60-170 s clinical budget and is
+indistinguishable from the pipeline falling behind. Hence T10 and the
+open-loop test assertions below.
+
+**Other properties to avoid:**
+
+- dropping past `MAX_BURST_PER_SEC`, with `seq` advanced only on send, so the
+  loss is deliberately invisible downstream
+- `producer.send()` is synchronous inside a coroutine; when the buffer fills it
+  blocks the event loop and stalls every stream at once
+- `_ingest_ts` stamped at record-build time, before the asynchronous send, so it
+  excludes producer buffering and batching
+- `recording_start` taken per (patient, label), which erases real offsets
+  between a patient's signals and degrades further on each loop restart
+
+**Properties to keep:** the wire schema, ordering by `c_sequence_number`,
+rebasing event time to now, preserving genuine gaps, and the defensive null
+handling, which documents real DWC data quality.
+
 ## 4. What the playback tests must assert
 
 Derived directly from sections 1 and 3, so the fidelity claim is executable.
