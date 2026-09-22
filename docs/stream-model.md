@@ -89,6 +89,73 @@ than merely refining one:
    is a batch export, "mocking a real-time PIC iX stream" from it needs rethinking
 4. Whether DWC preserves the monitor's `sequence_no` as `c_sequence_number`
 
+### 1.1b Can waveforms be obtained near real time, and at what floor
+
+Yes, but the achievable floor depends on the path, and through DWC it is
+multi-second rather than sub-second.
+
+**DWC is a continuously written SQL database, not a discharge-time dump.**
+Malunjkar et al. 2021 (Stanford Children's, ~500 beds on PIC iX,
+[arXiv:2106.03965](https://arxiv.org/abs/2106.03965)) state that Philips DWC is
+"part of the PIC iX system", stores monitor, telemetry and IntelliBridge device
+data "in an enterprise level SQL database", and captures "continuous waveforms
+such as Electrocardiogram (ECG) and invasive pressures". Their pipeline takes
+*nightly extracts*, but that is their design choice for a research warehouse,
+not a property of DWC. The rows are there as they are written.
+
+So near real time is reachable by **tailing the DWC SQL database** (change data
+capture, or interval polling) instead of extracting nightly. That is almost
+certainly what the proposal 2.3 reference platform does: Joachim et al. place
+**Mirth Connect**, a database-polling integration engine, between DWC and Kafka,
+and describe the result as real-time.
+
+**But DWC aggregates waveforms into multi-second blocks.** Derived from the
+Stanford daily row counts, with the method validated against their stated
+numeric rate:
+
+| Table | Rows/day | Per bed (400 active) | Implies |
+|---|---|---|---|
+| numeric value | 120 M | 3.47 /s | ~3.5 channels at **1 Hz**, matching their stated "1 second vital numerics". Method checks out |
+| wave sample | 10 M | **0.29 /s** | at 3-6 channels/bed, **one row every 10-21 s** |
+| enumeration | 60 M | 1.74 /s | alarms and status |
+
+A second, independent estimate from data volume agrees: 220 GB/day total, and
+numerics plus enumerations at ~100 B/row account for only ~18 GB, so waves
+dominate at roughly 8-15 KB/row, which is 4000-7500 int16 samples, i.e.
+**8-15 s of 500 Hz data per row**.
+
+Both methods converge on **roughly 3-20 s per wave row, centred near 10 s**.
+A 256 ms packet would be 3.906 rows/s/channel, about **80x denser** than
+observed. The DEI cadence therefore does not survive into DWC.
+
+Treat this as a derived estimate from published aggregates at a different
+hospital, not a measurement. It is the best available evidence until the
+`c_n_samples` query can be run.
+
+**Consequence for the thesis, and it is a substantive one.** If DWC blocks are
+~10 s, event-time staleness has a floor of about one block duration *at the
+source*, before Kafka, Flink or inference contribute anything. Against the
+60-170 s budget in proposal 4, acquisition alone would consume 6-17% of it, and
+would plausibly be the single largest fixed term in `T_pipeline`. That makes
+source block duration a first-class parameter of the testbed rather than an
+implementation detail, and quantifying it is arguably an RQ1 result in itself.
+
+**The full menu of acquisition paths:**
+
+| Path | Waveforms | Realistic floor | Viability at Charite |
+|---|---|---|---|
+| **DWC SQL tail** (CDC or polling) | yes | block duration, est. ~10 s, plus poll interval | the likely current path; needs DB read access |
+| **Capsule MDIP / Capsule Surveillance** | yes, live streaming | sub-second plausible | Philips' own live platform, feeds PIC iX and "100+ downstream systems". Needs licence |
+| Monitor DEI, MIB/RS232 | yes, 256 ms | sub-second | "always possible (except MP2/X2)" but needs per-bed cabling; will not scale to 77 beds |
+| Monitor DEI over LAN | yes, 256 ms | sub-second | **unavailable** when monitors are on the Philips LAN |
+| HL7 outbound from PIC iX | no, numerics only | n/a | not a waveform path |
+| Third party: BedMaster EX, Sickbay, MediCollector, ixTrend | yes | varies | used in research; MediCollector states device-specific cabling, max 50 devices |
+
+**What to ask Philips or the integration partner**, since the team cannot answer
+internally: what is the DWC wave write cadence and the bedside-to-row delay, is
+there a supported CDC or streaming subscription on DWC, and is Capsule MDIP
+licensed or available at the site.
+
 ### 1.2 Wave delivery cadence: 256 ms in the DEI, unconfirmed for DWC
 
 Treat this table as **the monitor's behaviour, and a hypothesis for DWC**, not as
