@@ -12,7 +12,7 @@ Three sources are used, and they are not equally authoritative:
 
 | Source | What it is | Authority |
 |---|---|---|
-| Philips *Data Export Interface Programming Guide*, X2/MP/MX/FM Rel. L.0, 4535 645 88011 | Vendor spec for the IntelliVue monitor wave/numeric export | Primary, quoted |
+| Philips *Data Export Interface Programming Guide*, [part 453564588011](https://www.documents.philips.com/doclib/enc/fetch/2000/4504/577242/577243/577247/582636/582882/X2%2C_MP%2C_MX_&_FM_Series_Rel._L.0_Data_Export_Interface_Program._Guide_4535_645_88011_(ENG).pdf) (IntelliVue X2, MP/MX Series, Avalon FM Series; 339 pp, published 08/2015) | Vendor spec for the IntelliVue monitor wave/numeric export | Primary, quoted |
 | LIVIA `waveform_producer` replay code | Charite code emitting DWC `te_wave` rows to Kafka | Secondary, shows the DWC field set in practice |
 | Measurements on 50 cached VitalDB cases | This repo, `data/vitaldb/` | Primary for the VitalDB side |
 
