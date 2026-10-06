@@ -62,7 +62,8 @@ class CasePlan:
     profile: str
     t_start: float
     emitters: list[StreamEmitter]
-    missing: tuple[str, ...]  # profile sources absent from this case; a sensor not attached
+    missing: tuple[str, ...]  # profile sources absent from the recording; a sensor never attached
+    late_start: tuple[str, ...] = ()  # present, but first data falls after the observation window
 
 
 @dataclass
@@ -88,6 +89,7 @@ class Schedule:
                     "profile": c.profile,
                     "n_streams": len(c.emitters),
                     "missing_sources": list(c.missing),
+                    "late_start_sources": list(c.late_start),
                 }
                 for c in self.cases
             ],
@@ -134,5 +136,5 @@ def build_schedule(
                     if 0.0 <= g - data.t_start < window
                 )
                 emitters.append(StreamEmitter(case_id, t.label, NUMERIC, ns.unit, None, items))
-        plans.append(CasePlan(case_id, profile.name, data.t_start, emitters, data.missing))
+        plans.append(CasePlan(case_id, profile.name, data.t_start, emitters, data.missing, data.late_start))
     return Schedule(plans, window, float(cfg.workload.speed), packet_ms)

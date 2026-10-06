@@ -83,6 +83,23 @@ def test_missing_wanted_source_is_reported_not_fatal(vitaldb_case_factory):
     assert "SNUADC/ART" in case.waves
 
 
+def test_track_starting_after_the_window_is_late_start_not_missing(vitaldb_case_factory):
+    # HR from case start; the arterial line is connected 400 s in. A 300 s window must
+    # report ART as late_start (it exists), not missing (it does not), and must not
+    # report it at all when reading the whole recording.
+    p = vitaldb_case_factory(
+        waves={"SNUADC/ART": {**ART, "blocks": blocks(1400.0, 500, 10)}},
+        numerics={"Solar8000/HR": {"points": [(1000.0 + 2 * i, 70) for i in range(300)]}},
+    )
+    cropped = read_vitaldb_case(p, ["SNUADC/ART", "Solar8000/HR", "SNUADC/CVP"], window_s=300)
+    assert cropped.missing == ("SNUADC/CVP",)
+    assert cropped.late_start == ("SNUADC/ART",)
+    assert "SNUADC/ART" not in cropped.waves and "Solar8000/HR" in cropped.numerics
+    full = read_vitaldb_case(p, ["SNUADC/ART", "Solar8000/HR", "SNUADC/CVP"])
+    assert full.missing == ("SNUADC/CVP",) and full.late_start == ()
+    assert full.waves["SNUADC/ART"].n_samples == 5000
+
+
 def test_case_span_covers_unwanted_tracks_too(vitaldb_case_factory):
     p = vitaldb_case_factory(
         waves={"SNUADC/ART": {**ART, "blocks": blocks(1000.0, 500, 2)}},

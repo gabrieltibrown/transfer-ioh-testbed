@@ -74,7 +74,8 @@ class CaseData:
     t_end: float
     waves: dict[str, SampleStream]
     numerics: dict[str, NumericStream]
-    missing: tuple[str, ...]  # wanted sources absent from this case; a sensor not attached
+    missing: tuple[str, ...]  # wanted sources absent from the whole recording; a sensor never attached
+    late_start: tuple[str, ...] = ()  # present in the recording but not within the cropped window
 
 
 class Source(Protocol):
@@ -124,6 +125,9 @@ def read_vitaldb_case(
         pc.cast(table["dname"], pa.string()), pc.cast(table["tname"], pa.string()), "/"
     )
     mask = pc.is_in(key, value_set=pa.array(sorted(wanted), pa.string()))
+    # Which wanted sources exist anywhere in the recording, before cropping, so a
+    # track that merely starts after the window is not reported as absent.
+    present = set(pc.unique(key.filter(mask)).to_pylist())
     if window_s is not None:
         mask = pc.and_(mask, pc.less_equal(table["dt"], t_start + window_s + _CROP_SLACK_S))
     table = table.filter(mask)
@@ -160,7 +164,9 @@ def read_vitaldb_case(
     found = set(waves) | set(numerics)
     return CaseData(
         caseid=caseid, t_start=float(t_start), t_end=float(t_end),
-        waves=waves, numerics=numerics, missing=tuple(sorted(wanted - found)),
+        waves=waves, numerics=numerics,
+        missing=tuple(sorted(wanted - present)),
+        late_start=tuple(sorted(present - found)),
     )
 
 
