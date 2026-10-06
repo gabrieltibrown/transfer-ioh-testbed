@@ -98,6 +98,68 @@ move to sprint 2. Rationale: the Flink job carries the most unresolved decisions
 and bolting it onto a spent sprint risks the rushed-instrumentation failure the
 plan warned against. See `plan.md`.
 
+## Results
+
+Measured 2026-10-06 on this laptop, serial and uncontended, commit `703526b`.
+Artefacts in `results/`.
+
+### Harness ceilings
+
+`ioh-replay --calibrate --calibrate-wall 20`, standard anaesthesia profile.
+The ceiling is the highest speed step whose verdict stayed `OK`; the next step
+is shown so the boundary is bracketed. Cadence-relative thresholds (10% / 100%
+of `packet_ms`). No step in any sweep saw a refused record (backpressure = 0).
+
+| Sink | Scenario | Cases | Ceiling | p99 lateness | Next step |
+|---|---|---|---|---|---|
+| null | `dwc_10s` | 20 | **31,138 rec/s, 32.8 MB/s** | 9 ms | DEGRADED at 55,768 rec/s (p99 2.4 s) |
+| null | `dei_256ms` | 20 | **51,945 rec/s, 37.0 MB/s** | 15 ms | INVALID at 59,814 rec/s (p99 11 s) |
+| kafka | `dwc_10s` | 10 | **30,403 rec/s, 31.1 MB/s** | 76 ms | DEGRADED at 43,215 rec/s (p99 2.3 s) |
+| kafka | `dei_256ms` | 10 | **12,468 rec/s, 8.9 MB/s** | 5 ms | INVALID at 25,350 rec/s (p99 513 ms) |
+
+Reading these:
+
+- With 10 s packets the harness is **JSON-bound** at ~31k records/s and ~33
+  MB/s whether or not Kafka is attached: the null and Kafka ceilings coincide,
+  so the producer and broker are not the limiting component at this scale.
+- With 256 ms packets the null sink reaches ~52k records/s but the Kafka path
+  caps at ~12.5k: per-record `produce()`/`poll()` overhead dominates when
+  packets are small. The broker itself kept up at 31 MB/s with `acks=all`.
+- **Headroom against sprint 2 needs** (stream-model 1.8): 50 concurrent cases
+  are ~425 records/s at `dwc_10s` and ~1,375 at `dei_256ms`, i.e. 70x and 9x
+  below the corresponding Kafka ceilings. The harness will not be the
+  bottleneck in local experiments, which is the property calibration exists to
+  establish.
+- Lateness *falls* as offered load rises until near the ceiling, because the
+  loop stops sleeping; the low-rate p99 is macOS timer slop, see above.
+- Four sweeps wrote 1.6 GB into the broker (VM disk 4.3 → 5.9 GB used of 224
+  GB); topics were deleted and recreated before the real run.
+
+### Real run: 5 cases, 300 s, speed 1, Kafka
+
+Run `20261006T180509Z-3360e2`, `standard_anaesthesia` x `dwc_10s`, 54 streams.
+
+| | |
+|---|---|
+| Verdict | **OK**, `latency_results_valid: true` |
+| Records | scheduled 9,265 = emitted 9,265 = delivered 9,265 = **broker offset delta 9,265** (660 wave + 8,605 numeric); 0 refused, 0 undelivered, 0 failed |
+| Offered rate | 30.9 records/s over 299.8 s |
+| Harness lateness | p50 0.33 ms, p90 0.79 ms, p99 9.7 ms, max 17.7 ms (N = 9,265) |
+| Numerics' share | 93% of records, as predicted for 10 s packets |
+
+The consume-back check is exact: every record the harness believes it emitted
+is on the broker, keyed by case, with `LogAppendTime`.
+
+**Tracks that start late.** Wave counts were below the nominal 5 waves x 30
+packets x 5 cases because some channels begin after the case's first row:
+case 12's ART, ECG_II and PLETH all start more than 300 s in, and several
+Solar8000 numerics (ETCO2, RR_CO2, BT) start late or are absent in other cases.
+This is faithful to the recordings (a line connected late emits nothing early)
+but it lowers per-case load in short windows. The reader now distinguishes
+`missing` (absent from the recording) from `late_start` (present, but after the
+window), and both are recorded per case in run metadata. Longer windows or a
+later window start reduce the effect; it is a parameter to report, not a defect.
+
 ## Still open, not answerable internally
 
 For Philips or the integration partner: DWC wave write cadence and

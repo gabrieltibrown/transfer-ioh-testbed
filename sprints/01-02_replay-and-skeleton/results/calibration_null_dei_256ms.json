@@ -1,0 +1,176 @@
+{
+  "run_id": "20261006T175318Z-acf8c4",
+  "kind": "calibration",
+  "sink": "null",
+  "cases": 20,
+  "workload": "standard_anaesthesia",
+  "scenario": "dei_256ms",
+  "packet_ms": 256,
+  "thresholds_ms": {
+    "tolerance": 25.6,
+    "invalid": 256.0
+  },
+  "spin_ms": 2.0,
+  "git": {
+    "commit": "703526b405dbe26850f8020886278826261103b8",
+    "describe": "703526b",
+    "branch": "sprint/01-02-replay-and-skeleton",
+    "dirty": true
+  },
+  "config_files": [
+    {
+      "path": "configs/workload/standard_anaesthesia.yaml",
+      "sha256": "59136deeadcea25a84729fe6174dfdbbb871aa9f921f72d8b7af86cbc6e9d089",
+      "bytes": 1573
+    },
+    {
+      "path": "configs/scenarios/dei_256ms.yaml",
+      "sha256": "9019abf082163b7c9ccf78db93beec12ee44ee15b01016e225eaa40d58c447bd",
+      "bytes": 323
+    }
+  ],
+  "environment": {
+    "hostname": "WAE-CYHWD4J653",
+    "platform": "macOS-26.6-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "host_cpus": 8,
+    "host_mem_bytes": 8589934592,
+    "python": "3.13.5",
+    "uv": "uv 0.8.13 (Homebrew 2025-08-21)",
+    "docker": {
+      "available": true,
+      "server_version": "29.1.3",
+      "vm_cpus": 8,
+      "vm_mem_bytes": 4109217792,
+      "containers": {
+        "ioh-kafka": {
+          "image": "apache/kafka:4.0.0",
+          "image_digest": "apache/kafka@sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75",
+          "image_id": "sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75",
+          "mem_limit_bytes": 1610612736,
+          "cpus": 2.0
+        }
+      }
+    },
+    "clock_domain": "single-host"
+  },
+  "steps": [
+    {
+      "speed": 1,
+      "window_s": 20,
+      "wall_s": 19.979,
+      "n_records": 9124,
+      "offered_records_per_s": 456.67,
+      "bytes_per_s": 342171,
+      "lateness_p99_ms": 6.072,
+      "lateness_max_ms": 10.285,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "OK"
+    },
+    {
+      "speed": 2,
+      "window_s": 40,
+      "wall_s": 19.977,
+      "n_records": 18874,
+      "offered_records_per_s": 944.77,
+      "bytes_per_s": 702673,
+      "lateness_p99_ms": 5.439,
+      "lateness_max_ms": 19.816,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "OK"
+    },
+    {
+      "speed": 5,
+      "window_s": 100,
+      "wall_s": 19.994,
+      "n_records": 48279,
+      "offered_records_per_s": 2414.69,
+      "bytes_per_s": 1784741,
+      "lateness_p99_ms": 4.22,
+      "lateness_max_ms": 26.832,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "OK"
+    },
+    {
+      "speed": 10,
+      "window_s": 200,
+      "wall_s": 19.998,
+      "n_records": 97747,
+      "offered_records_per_s": 4887.78,
+      "bytes_per_s": 3595652,
+      "lateness_p99_ms": 1.123,
+      "lateness_max_ms": 6.482,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "OK"
+    },
+    {
+      "speed": 20,
+      "window_s": 400,
+      "wall_s": 20.002,
+      "n_records": 198529,
+      "offered_records_per_s": 9925.47,
+      "bytes_per_s": 7249710,
+      "lateness_p99_ms": 1.079,
+      "lateness_max_ms": 7.977,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "OK"
+    },
+    {
+      "speed": 50,
+      "window_s": 1000,
+      "wall_s": 20.013,
+      "n_records": 511049,
+      "offered_records_per_s": 25535.69,
+      "bytes_per_s": 18380689,
+      "lateness_p99_ms": 1.226,
+      "lateness_max_ms": 14.83,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "OK"
+    },
+    {
+      "speed": 100,
+      "window_s": 2000,
+      "wall_s": 20.044,
+      "n_records": 1041178,
+      "offered_records_per_s": 51944.97,
+      "bytes_per_s": 36978969,
+      "lateness_p99_ms": 15.489,
+      "lateness_max_ms": 32.522,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "OK"
+    },
+    {
+      "speed": 200,
+      "window_s": 3000,
+      "wall_s": 26.332,
+      "n_records": 1574991,
+      "offered_records_per_s": 59813.58,
+      "bytes_per_s": 42368700,
+      "lateness_p99_ms": 11126.682,
+      "lateness_max_ms": 11273.843,
+      "n_backpressure": 0,
+      "n_undelivered": 0,
+      "verdict": "INVALID"
+    }
+  ],
+  "ceiling": {
+    "speed": 100,
+    "window_s": 2000,
+    "wall_s": 20.044,
+    "n_records": 1041178,
+    "offered_records_per_s": 51944.97,
+    "bytes_per_s": 36978969,
+    "lateness_p99_ms": 15.489,
+    "lateness_max_ms": 32.522,
+    "n_backpressure": 0,
+    "n_undelivered": 0,
+    "verdict": "OK"
+  }
+}

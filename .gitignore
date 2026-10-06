@@ -32,4 +32,4 @@ venv/
 .vscode/
 
 # Per-run scratch output; curated results are copied into sprints/
-results/
+/results/
