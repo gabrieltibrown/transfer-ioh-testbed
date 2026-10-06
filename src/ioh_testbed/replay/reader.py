@@ -78,21 +78,39 @@ class CaseData:
 
 
 class Source(Protocol):
-    def read_case(self, caseid: int | str, wanted: Iterable[str]) -> CaseData: ...
+    def read_case(
+        self, caseid: int | str, wanted: Iterable[str], window_s: float | None = None
+    ) -> CaseData: ...
 
 
 class VitalDBSource:
     def __init__(self, data_dir: Path):
         self.data_dir = Path(data_dir)
 
-    def read_case(self, caseid: int | str, wanted: Iterable[str]) -> CaseData:
-        return read_vitaldb_case(self.data_dir / f"{caseid}.parquet", wanted, caseid=caseid)
+    def read_case(
+        self, caseid: int | str, wanted: Iterable[str], window_s: float | None = None
+    ) -> CaseData:
+        return read_vitaldb_case(
+            self.data_dir / f"{caseid}.parquet", wanted, caseid=caseid, window_s=window_s
+        )
 
 
 _COLUMNS = ["dt", "dname", "tname", "unit", "ivals", "fvals", "nval", "srate", "gain", "bias"]
 
+# Slack past the window when cropping, so the block that straddles the window end
+# is read in full. Source blocks are ~1 s.
+_CROP_SLACK_S = 2.0
 
-def read_vitaldb_case(path: Path, wanted: Iterable[str], caseid: int | str | None = None) -> CaseData:
+
+def read_vitaldb_case(
+    path: Path,
+    wanted: Iterable[str],
+    caseid: int | str | None = None,
+    window_s: float | None = None,
+) -> CaseData:
+    """``window_s`` crops reading to the first ``window_s`` seconds of the case, since
+    a run only replays its observation window. ``t_start``/``t_end`` still describe
+    the whole recording."""
     wanted = set(wanted)
     caseid = caseid if caseid is not None else Path(path).stem
 
@@ -106,6 +124,8 @@ def read_vitaldb_case(path: Path, wanted: Iterable[str], caseid: int | str | Non
         pc.cast(table["dname"], pa.string()), pc.cast(table["tname"], pa.string()), "/"
     )
     mask = pc.is_in(key, value_set=pa.array(sorted(wanted), pa.string()))
+    if window_s is not None:
+        mask = pc.and_(mask, pc.less_equal(table["dt"], t_start + window_s + _CROP_SLACK_S))
     table = table.filter(mask)
     key = key.filter(mask)
     df = table.to_pandas()
@@ -161,7 +181,9 @@ def _segments(dts: np.ndarray, arrays, srate: float) -> list[Segment]:
                 buf = []
             expected = None
             continue
-        a = np.asarray(arr, dtype=float)  # None elements become NaN
+        # None elements become NaN. float32 holds the full int16 range exactly and
+        # halves the footprint of 50 concurrent cases.
+        a = np.asarray(arr, dtype=np.float32)
         if expected is not None and abs(dt - expected) <= tol:
             buf.append(a)
         else:

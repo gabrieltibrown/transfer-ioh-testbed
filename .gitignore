@@ -30,3 +30,6 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# Per-run scratch output; curated results are copied into sprints/
+results/

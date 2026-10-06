@@ -15,6 +15,9 @@ dependencies = [
     "pyyaml>=6.0",
 ]
 
+[project.scripts]
+ioh-replay = "ioh_testbed.replay.__main__:main"
+
 [dependency-groups]
 dev = ["pytest>=8.0", "ruff>=0.6"]
 
