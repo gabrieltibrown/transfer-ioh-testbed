@@ -1,315 +1,976 @@
 {
   "source": "VitalDB open dataset (Lee et al. 2022)",
   "api": "https://api.vitaldb.net",
-  "fetched_utc": "2026-09-01T15:11:33+00:00",
-  "required_tracks": [
+  "fetched_utc": "2026-10-06T17:13:45+00:00",
+  "required_waves": [
     "SNUADC/ART",
-    "Solar8000/ART_MBP",
     "SNUADC/ECG_II"
   ],
-  "eligible_case_count": 3643,
-  "selection": "lowest N eligible case ids, ascending, for determinism",
+  "required_numerics": [
+    "Solar8000/ART_MBP"
+  ],
+  "selection": "lowest catalogue-eligible case ids, ascending, accepted only if the Parquet content holds the required tracks",
+  "catalogue_candidate_count": 3643,
+  "rejected": [
+    {
+      "caseid": 3,
+      "has_required_waves": false,
+      "has_required_numerics": false
+    },
+    {
+      "caseid": 14,
+      "has_required_waves": false,
+      "has_required_numerics": false
+    },
+    {
+      "caseid": 32,
+      "has_required_waves": false,
+      "has_required_numerics": false
+    },
+    {
+      "caseid": 91,
+      "has_required_waves": false,
+      "has_required_numerics": false
+    }
+  ],
   "cases": [
     {
       "caseid": 1,
       "file": "1.parquet",
       "bytes": 17780741,
-      "sha256": "b9ca0f55ff581ca01204e0f6a3fcfb1f324c7e4fd0abb201f81dbd0d45b4ad6a"
-    },
-    {
-      "caseid": 3,
-      "file": "3.parquet",
-      "bytes": 5636964,
-      "sha256": "607c8cc6826ce88ddef5e605998cdd488f44ddb55fefd510d9ab7e1df2564a59"
+      "sha256": "b9ca0f55ff581ca01204e0f6a3fcfb1f324c7e4fd0abb201f81dbd0d45b4ad6a",
+      "duration_s": 11542.1,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 69
     },
     {
       "caseid": 4,
       "file": "4.parquet",
       "bytes": 23292701,
-      "sha256": "72eb9a2ba29721acc07437af8e9df7d6baedd209f267ca1bb9554068300a76f7"
+      "sha256": "72eb9a2ba29721acc07437af8e9df7d6baedd209f267ca1bb9554068300a76f7",
+      "duration_s": 20989.8,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 66
     },
     {
       "caseid": 7,
       "file": "7.parquet",
       "bytes": 15874971,
-      "sha256": "a28c380ae0de5acea70081d8696076bef46b1b334c38872e30775a38b6f1336a"
+      "sha256": "a28c380ae0de5acea70081d8696076bef46b1b334c38872e30775a38b6f1336a",
+      "duration_s": 15769.9,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 71
     },
     {
       "caseid": 10,
       "file": "10.parquet",
       "bytes": 23552179,
-      "sha256": "8b1fcd91dbde0e24b7225ed3f30a326851fcf8e478e5e314361b98a3c3d0c338"
+      "sha256": "8b1fcd91dbde0e24b7225ed3f30a326851fcf8e478e5e314361b98a3c3d0c338",
+      "duration_s": 20992.5,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 70
     },
     {
       "caseid": 12,
       "file": "12.parquet",
       "bytes": 35838194,
-      "sha256": "f0cea3c8e807f0e13354a6f2ba7595cdd92b818c5a254e876571b34e6ff497db"
+      "sha256": "f0cea3c8e807f0e13354a6f2ba7595cdd92b818c5a254e876571b34e6ff497db",
+      "duration_s": 31203.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/FEM"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 88
     },
     {
       "caseid": 13,
       "file": "13.parquet",
       "bytes": 12011953,
-      "sha256": "2e6a2624f1316025829821fc149eadd715c93f8640d85437e71ffe8e42bf7acd"
-    },
-    {
-      "caseid": 14,
-      "file": "14.parquet",
-      "bytes": 4776422,
-      "sha256": "954c07d71ec73b5a1045d36201ac3bb63baf1fed4560394c3f5ce40dd7206be2"
+      "sha256": "2e6a2624f1316025829821fc149eadd715c93f8640d85437e71ffe8e42bf7acd",
+      "duration_s": 10811.1,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 67
     },
     {
       "caseid": 16,
       "file": "16.parquet",
       "bytes": 17198781,
-      "sha256": "ac68d4b5bb148fdd744a47b9d6f5809854daabfda00302efbdf29e2f696d2bf9"
+      "sha256": "ac68d4b5bb148fdd744a47b9d6f5809854daabfda00302efbdf29e2f696d2bf9",
+      "duration_s": 12867.3,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 78
     },
     {
       "caseid": 17,
       "file": "17.parquet",
       "bytes": 28767347,
-      "sha256": "9e3d6ceb9c9584eb823b3c750e4b3caa8c1f726498c9f345a1a6c794aafdb912"
+      "sha256": "9e3d6ceb9c9584eb823b3c750e4b3caa8c1f726498c9f345a1a6c794aafdb912",
+      "duration_s": 20369.8,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 86
     },
     {
       "caseid": 19,
       "file": "19.parquet",
       "bytes": 46840990,
-      "sha256": "d5cdc3d748b792bece0f52db33b772148b520646bdc70d56e2fae67e2b761428"
+      "sha256": "d5cdc3d748b792bece0f52db33b772148b520646bdc70d56e2fae67e2b761428",
+      "duration_s": 27575.5,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "CardioQ/ABP",
+        "CardioQ/FLOW",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 11,
+      "n_numeric_tracks": 99
     },
     {
       "caseid": 20,
       "file": "20.parquet",
       "bytes": 35222133,
-      "sha256": "d9eb097d32d0cb700595cd6505b18521a158f71f85219fac430e074bd4e3f8f7"
+      "sha256": "d9eb097d32d0cb700595cd6505b18521a158f71f85219fac430e074bd4e3f8f7",
+      "duration_s": 26475.6,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 73
     },
     {
       "caseid": 22,
       "file": "22.parquet",
       "bytes": 11601810,
-      "sha256": "d5ff4854056d3d79d7c6a46a434bc75f64a90be47d135ad833f609c8f7c0ce67"
+      "sha256": "d5ff4854056d3d79d7c6a46a434bc75f64a90be47d135ad833f609c8f7c0ce67",
+      "duration_s": 14374.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 76
     },
     {
       "caseid": 24,
       "file": "24.parquet",
       "bytes": 6633631,
-      "sha256": "308534a20fcf7aaf41cdbc60934d3f8a39a4e0fa46930d3f60b6803bd0c1f14b"
+      "sha256": "308534a20fcf7aaf41cdbc60934d3f8a39a4e0fa46930d3f60b6803bd0c1f14b",
+      "duration_s": 6491.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 68
     },
     {
       "caseid": 25,
       "file": "25.parquet",
       "bytes": 20068825,
-      "sha256": "2153bc4bb4ea20595152d9cf82f3c4ce7ac7955e0a6113f542c1a85a7d17ba84"
+      "sha256": "2153bc4bb4ea20595152d9cf82f3c4ce7ac7955e0a6113f542c1a85a7d17ba84",
+      "duration_s": 14832.3,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 81
     },
     {
       "caseid": 26,
       "file": "26.parquet",
       "bytes": 12378269,
-      "sha256": "abb10feaf71c0476ebd793e00c8d50cada36ca522e3e0dda6f7c1104879eaf07"
+      "sha256": "abb10feaf71c0476ebd793e00c8d50cada36ca522e3e0dda6f7c1104879eaf07",
+      "duration_s": 10710.7,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 67
     },
     {
       "caseid": 27,
       "file": "27.parquet",
       "bytes": 19024823,
-      "sha256": "978fd853f1584e69b7921b50583fbfae49da355b44994ae78833943f088b41d3"
+      "sha256": "978fd853f1584e69b7921b50583fbfae49da355b44994ae78833943f088b41d3",
+      "duration_s": 17869.4,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 68
     },
     {
       "caseid": 28,
       "file": "28.parquet",
       "bytes": 24259291,
-      "sha256": "7fcb435fb91fdf861c4aaafe666021ad8853ec78199dbedc017f6c51b8c622c1"
+      "sha256": "7fcb435fb91fdf861c4aaafe666021ad8853ec78199dbedc017f6c51b8c622c1",
+      "duration_s": 26902.2,
+      "wave_tracks": [
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 6,
+      "n_numeric_tracks": 66
     },
     {
       "caseid": 29,
       "file": "29.parquet",
       "bytes": 29117754,
-      "sha256": "43556ae35b297335d2a510ed74a8d59eb06b93990f2087aae9fd99f1c5e7deb7"
+      "sha256": "43556ae35b297335d2a510ed74a8d59eb06b93990f2087aae9fd99f1c5e7deb7",
+      "duration_s": 21393.7,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 82
     },
     {
       "caseid": 31,
       "file": "31.parquet",
       "bytes": 11687171,
-      "sha256": "441feb60b5ff780e64d72f0fd49466705566ca9b131fdbbfd86957035486913e"
-    },
-    {
-      "caseid": 32,
-      "file": "32.parquet",
-      "bytes": 1970013,
-      "sha256": "ec7ca6dbb37e7837238326c0deb4e4b214c675297aeb9ee728d0ef33f3172548"
+      "sha256": "441feb60b5ff780e64d72f0fd49466705566ca9b131fdbbfd86957035486913e",
+      "duration_s": 10416.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 74
     },
     {
       "caseid": 34,
       "file": "34.parquet",
       "bytes": 32215278,
-      "sha256": "2cf868e6ec3392a824af6eb535b246d27956223ebc434c19f7c4a92ff9f75845"
+      "sha256": "2cf868e6ec3392a824af6eb535b246d27956223ebc434c19f7c4a92ff9f75845",
+      "duration_s": 23773.8,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 85
     },
     {
       "caseid": 38,
       "file": "38.parquet",
       "bytes": 15184348,
-      "sha256": "a614bda7a1bf17db932675b1b2277b0b1cdb1a46fa0b89af555ca563f5d17066"
+      "sha256": "a614bda7a1bf17db932675b1b2277b0b1cdb1a46fa0b89af555ca563f5d17066",
+      "duration_s": 12290.9,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 77
     },
     {
       "caseid": 43,
       "file": "43.parquet",
       "bytes": 17742471,
-      "sha256": "9e6b2701a8e3a7dac340ce2cb473ccfda72d46e58891aa6f6937439e1a816b9b"
+      "sha256": "9e6b2701a8e3a7dac340ce2cb473ccfda72d46e58891aa6f6937439e1a816b9b",
+      "duration_s": 14790.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 66
     },
     {
       "caseid": 44,
       "file": "44.parquet",
       "bytes": 18891374,
-      "sha256": "724a860939148f16a93c328a6358dce1c43ab504cdcb0c37f0404b1ae23cf235"
+      "sha256": "724a860939148f16a93c328a6358dce1c43ab504cdcb0c37f0404b1ae23cf235",
+      "duration_s": 14614.3,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 72
     },
     {
       "caseid": 46,
       "file": "46.parquet",
       "bytes": 13408167,
-      "sha256": "10c95e121490ae9e9489b3cbd7e39d258457dc87f7b3ccc5463bd1303542ba42"
+      "sha256": "10c95e121490ae9e9489b3cbd7e39d258457dc87f7b3ccc5463bd1303542ba42",
+      "duration_s": 10616.6,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 69
     },
     {
       "caseid": 49,
       "file": "49.parquet",
       "bytes": 14558330,
-      "sha256": "24e8155465089f68dd85bb74c81f60f7bce47c2b7cc1a068820be0f3fe560185"
+      "sha256": "24e8155465089f68dd85bb74c81f60f7bce47c2b7cc1a068820be0f3fe560185",
+      "duration_s": 12508.9,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 61
     },
     {
       "caseid": 50,
       "file": "50.parquet",
       "bytes": 20674102,
-      "sha256": "ba916cae951a730be55c82e5d70567ab97fc292837d554d2efd38d202f5481c1"
+      "sha256": "ba916cae951a730be55c82e5d70567ab97fc292837d554d2efd38d202f5481c1",
+      "duration_s": 15987.1,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 73
     },
     {
       "caseid": 51,
       "file": "51.parquet",
       "bytes": 5266692,
-      "sha256": "66944dadab8bdd2718dd226bb8ec4f0e37653d2271cc8e1f43c9966a9caf3b99"
+      "sha256": "66944dadab8bdd2718dd226bb8ec4f0e37653d2271cc8e1f43c9966a9caf3b99",
+      "duration_s": 8690.8,
+      "wave_tracks": [
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 5,
+      "n_numeric_tracks": 59
     },
     {
       "caseid": 52,
       "file": "52.parquet",
       "bytes": 22996734,
-      "sha256": "a1587a4015710474db1f86b3e73dd8ebce95218396aa0971636d5a6d5960d300"
+      "sha256": "a1587a4015710474db1f86b3e73dd8ebce95218396aa0971636d5a6d5960d300",
+      "duration_s": 15590.1,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 86
     },
     {
       "caseid": 53,
       "file": "53.parquet",
       "bytes": 12455820,
-      "sha256": "6c92de8be149986437855b03f9ec1952af552041ab74e4720c191ec57878a8dd"
+      "sha256": "6c92de8be149986437855b03f9ec1952af552041ab74e4720c191ec57878a8dd",
+      "duration_s": 13536.9,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II"
+      ],
+      "n_wave_tracks": 6,
+      "n_numeric_tracks": 71
     },
     {
       "caseid": 55,
       "file": "55.parquet",
       "bytes": 35268840,
-      "sha256": "f26d863a31bf3a664c552620af2350786e0dce77685df4dbafe2ba5fa29a5b12"
+      "sha256": "f26d863a31bf3a664c552620af2350786e0dce77685df4dbafe2ba5fa29a5b12",
+      "duration_s": 21734.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/FEM"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 107
     },
     {
       "caseid": 58,
       "file": "58.parquet",
       "bytes": 20301197,
-      "sha256": "5999f04a4c97f5ca6178dd614b6c7dc6117f96642616aab50c4fd7bf888be5a9"
+      "sha256": "5999f04a4c97f5ca6178dd614b6c7dc6117f96642616aab50c4fd7bf888be5a9",
+      "duration_s": 14723.7,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 76
     },
     {
       "caseid": 59,
       "file": "59.parquet",
       "bytes": 5237211,
-      "sha256": "8b3cd37dcbb23c64ba1855856783c6b2751cd4ade0571e7227ea9b10a9c4333e"
+      "sha256": "8b3cd37dcbb23c64ba1855856783c6b2751cd4ade0571e7227ea9b10a9c4333e",
+      "duration_s": 3351.6,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 72
     },
     {
       "caseid": 60,
       "file": "60.parquet",
       "bytes": 21999464,
-      "sha256": "aca7d0dc6f90050dd8448f4546944c510b8dd24ae15cc50d0252e93fac1d78a2"
+      "sha256": "aca7d0dc6f90050dd8448f4546944c510b8dd24ae15cc50d0252e93fac1d78a2",
+      "duration_s": 14289.1,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 90
     },
     {
       "caseid": 61,
       "file": "61.parquet",
       "bytes": 11177295,
-      "sha256": "8d6161a8c41c3a955bdaae94089eaca2e7965f1657a25650bba6eb90ebe28872"
+      "sha256": "8d6161a8c41c3a955bdaae94089eaca2e7965f1657a25650bba6eb90ebe28872",
+      "duration_s": 9290.6,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 71
     },
     {
       "caseid": 64,
       "file": "64.parquet",
       "bytes": 15889792,
-      "sha256": "da4e0cb89ba7080fc4ef0ae7090c9ed336eff81cf7c54e7d5ccf2ae11cf4b2a4"
+      "sha256": "da4e0cb89ba7080fc4ef0ae7090c9ed336eff81cf7c54e7d5ccf2ae11cf4b2a4",
+      "duration_s": 14426.7,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 68
     },
     {
       "caseid": 65,
       "file": "65.parquet",
       "bytes": 14026599,
-      "sha256": "a3a7fc634c8d590ee4a333a33790569eba223bae95923c77a342efd18398ec3f"
+      "sha256": "a3a7fc634c8d590ee4a333a33790569eba223bae95923c77a342efd18398ec3f",
+      "duration_s": 12849.6,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 70
     },
     {
       "caseid": 66,
       "file": "66.parquet",
       "bytes": 9715682,
-      "sha256": "a6beca00dc3d8fce2c86a3aa8ef7a4039189314551ca713d0ca7cad58dfca312"
+      "sha256": "a6beca00dc3d8fce2c86a3aa8ef7a4039189314551ca713d0ca7cad58dfca312",
+      "duration_s": 9262.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 69
     },
     {
       "caseid": 67,
       "file": "67.parquet",
       "bytes": 14929742,
-      "sha256": "8d142a56b1ee7bc29e07a5fed83184a4b98df8ae22118dbd50a4e98cd3fca219"
+      "sha256": "8d142a56b1ee7bc29e07a5fed83184a4b98df8ae22118dbd50a4e98cd3fca219",
+      "duration_s": 11592.4,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 72
     },
     {
       "caseid": 68,
       "file": "68.parquet",
       "bytes": 9717773,
-      "sha256": "1b1dc9ab01f99ab6f00abc549460a7a5308fd2703fc944c538e60664ca1c0bcd"
+      "sha256": "1b1dc9ab01f99ab6f00abc549460a7a5308fd2703fc944c538e60664ca1c0bcd",
+      "duration_s": 8781.1,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 78
     },
     {
       "caseid": 69,
       "file": "69.parquet",
       "bytes": 9271145,
-      "sha256": "7e03e31c36def228b70e6041d27c0d9f3d7b7c8a6f9b1dea23976d9bce258c4e"
+      "sha256": "7e03e31c36def228b70e6041d27c0d9f3d7b7c8a6f9b1dea23976d9bce258c4e",
+      "duration_s": 7363.5,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 67
     },
     {
       "caseid": 70,
       "file": "70.parquet",
       "bytes": 22561652,
-      "sha256": "a98697cbd34255545eb08a32f14bee3896e0e7213168e27cc8f513bbb97425c4"
+      "sha256": "a98697cbd34255545eb08a32f14bee3896e0e7213168e27cc8f513bbb97425c4",
+      "duration_s": 14146.6,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 88
     },
     {
       "caseid": 74,
       "file": "74.parquet",
       "bytes": 23120111,
-      "sha256": "f3fabbe870a8b600cb1f51ab8465c72f418cb6cd3e37f1e44f9a4af326f86390"
+      "sha256": "f3fabbe870a8b600cb1f51ab8465c72f418cb6cd3e37f1e44f9a4af326f86390",
+      "duration_s": 19896.6,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 71
     },
     {
       "caseid": 75,
       "file": "75.parquet",
       "bytes": 32294364,
-      "sha256": "f7ccb2532e3aaede9e69065020bba65c32b81da08544b910b7769197e8b3bf62"
+      "sha256": "f7ccb2532e3aaede9e69065020bba65c32b81da08544b910b7769197e8b3bf62",
+      "duration_s": 25124.2,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 69
     },
     {
       "caseid": 77,
       "file": "77.parquet",
       "bytes": 12890522,
-      "sha256": "3820356d6c16a6776282dd80f15ad5582d05464ec72f36e628243a4f91d3f9e9"
+      "sha256": "3820356d6c16a6776282dd80f15ad5582d05464ec72f36e628243a4f91d3f9e9",
+      "duration_s": 10764.3,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 70
     },
     {
       "caseid": 79,
       "file": "79.parquet",
       "bytes": 25075355,
-      "sha256": "1300d7ceaca9fbb50ba143c13d7f45de089ee7ae0d385963eb05517376f4e869"
+      "sha256": "1300d7ceaca9fbb50ba143c13d7f45de089ee7ae0d385963eb05517376f4e869",
+      "duration_s": 20179.9,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 71
     },
     {
       "caseid": 83,
       "file": "83.parquet",
       "bytes": 29254190,
-      "sha256": "8a39045077f9df93f1fe6a46d9c1701cca7cc20a05a88c6ee9925f518f81f884"
+      "sha256": "8a39045077f9df93f1fe6a46d9c1701cca7cc20a05a88c6ee9925f518f81f884",
+      "duration_s": 19385.2,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/CVP",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 9,
+      "n_numeric_tracks": 85
     },
     {
       "caseid": 84,
       "file": "84.parquet",
       "bytes": 18839738,
-      "sha256": "1746cf95bbf80a173959cb7d172884a6d9cde27916c5e83ba5863837f09839dd"
+      "sha256": "1746cf95bbf80a173959cb7d172884a6d9cde27916c5e83ba5863837f09839dd",
+      "duration_s": 17713.9,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 68
     },
     {
       "caseid": 87,
       "file": "87.parquet",
       "bytes": 15033151,
-      "sha256": "5a083de7d1b31b98243ac7de89227bc232c533def6e50101930dc48b8f5e54e9"
+      "sha256": "5a083de7d1b31b98243ac7de89227bc232c533def6e50101930dc48b8f5e54e9",
+      "duration_s": 11230.0,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/ECG_V5",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 8,
+      "n_numeric_tracks": 68
+    },
+    {
+      "caseid": 89,
+      "file": "89.parquet",
+      "bytes": 20709494,
+      "sha256": "904af1ff1ee6f92775dbdb87f6ff660324dd5a0b28ce712b2a58a37895cbe669",
+      "duration_s": 19824.7,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 68
+    },
+    {
+      "caseid": 92,
+      "file": "92.parquet",
+      "bytes": 5401621,
+      "sha256": "83f61f495d6ca38b3af335caa3621435cb12099c4dd896259d43eee6213db940",
+      "duration_s": 4720.2,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 68
+    },
+    {
+      "caseid": 93,
+      "file": "93.parquet",
+      "bytes": 4472321,
+      "sha256": "8f3861c23808cfd92a333598035f8c158bdb413cc2bd0b763015be413de28bdd",
+      "duration_s": 4135.7,
+      "wave_tracks": [
+        "BIS/EEG1_WAV",
+        "BIS/EEG2_WAV",
+        "Primus/AWP",
+        "Primus/CO2",
+        "SNUADC/ART",
+        "SNUADC/ECG_II",
+        "SNUADC/PLETH"
+      ],
+      "n_wave_tracks": 7,
+      "n_numeric_tracks": 69
     }
   ],
-  "total_bytes": 923532102
+  "total_bytes": 941732139
 }

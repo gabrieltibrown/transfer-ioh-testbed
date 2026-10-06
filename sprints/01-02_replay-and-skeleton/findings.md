@@ -22,9 +22,9 @@ will be tight and must be measured, not assumed.
 | | |
 |---|---|
 | Source | `https://api.vitaldb.net/<caseid>.parquet`, one Parquet per case |
-| Cached | 50 cases, 881 MB, under `data/vitaldb/` (gitignored) |
+| Cached | 50 cases, 898 MB, under `data/vitaldb/` (gitignored) |
 | Eligible by catalogue | 3,643 of 6,388 cases list `SNUADC/ART`, `Solar8000/ART_MBP`, `SNUADC/ECG_II` |
-| **Catalogue is unreliable** | cases 3, 14, 32 are listed as having ART and ART_MBP but their Parquet files contain neither. Selection must validate on content |
+| **Catalogue is unreliable** | 4 of the first 54 catalogue-eligible cases (3, 14, 32, 91) list ART and ART_MBP but their Parquet files contain neither. Selection validates on content; rejected ids are recorded in the manifest |
 | Duration | min 0.93 h, p25 2.98 h, median 3.98 h, p75 5.49 h, max 8.67 h |
 | Waveform tracks per case | min 4, median 8, max 11 |
 | Numeric tracks per case | min 55, median 71, max 107 |
