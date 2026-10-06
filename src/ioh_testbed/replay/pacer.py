@@ -17,6 +17,16 @@ fields ``_t_sched`` / ``_t_produce`` come from one ``(t0_mono, t0_wall)`` pair
 so they are comparable with Kafka's ``LogAppendTime``. At ``speed != 1`` event
 time is compressed by the same factor as the deadlines; latency results from
 such runs are not valid and ``RunStats`` says so.
+
+**What lateness means, and how the verdict is thresholded.** Harness lateness
+(``t_produce - t_sched``) never enters pipeline latency, which is measured from
+the broker's ``LogAppendTime``. It bounds only how faithfully the offered load's
+timing tracks the schedule. The CLI therefore sets the verdict thresholds
+relative to the packet cadence: DEGRADED when p99 lateness exceeds 10% of
+``packet_ms``, INVALID when it exceeds 100% (the harness fell a whole packet
+behind) or any record was refused. On macOS roughly 1% of long sleeps wake
+15-20 ms late from timer coalescing, which the hybrid wait cannot recover; that
+is immaterial against a 256 ms or 10 s cadence and is ~1 ms on Linux.
 """
 
 from __future__ import annotations
@@ -83,6 +93,7 @@ class RunStats:
     speed: float
     tolerance_ms: float
     invalid_ms: float
+    spin_ms: float = 0.0
     per_case: dict[str, int] = field(default_factory=dict)
     per_kind: dict[str, int] = field(default_factory=dict)
     sink: dict = field(default_factory=dict)
@@ -122,6 +133,7 @@ class RunStats:
                 "n_over_tolerance": int((self.lateness_s * 1000 > self.tolerance_ms).sum()) if n else 0,
             },
             "thresholds_ms": {"tolerance": self.tolerance_ms, "invalid": self.invalid_ms},
+            "spin_ms": self.spin_ms,
             "speed": self.speed,
             "per_case": self.per_case,
             "per_kind": self.per_kind,
@@ -136,18 +148,30 @@ class Pacer:
         *,
         tolerance_ms: float = 10.0,
         invalid_ms: float = 1000.0,
+        spin_s: float = 0.002,
         clock: Callable[[], float] = time.monotonic,
         wall: Callable[[], float] = time.time,
         sleep: Callable[[float], "asyncio.Future"] = asyncio.sleep,
+        spin: Callable[[float], None] | None = None,
         flush_timeout_s: float = 30.0,
     ):
+        """``spin_s``: hybrid wait. Sleep until this close to the deadline, then
+        busy-wait the remainder. OS timers wake late by 1 ms (Linux) to 10-20 ms
+        (macOS, timer coalescing); spinning the last couple of milliseconds buys
+        sub-millisecond lateness for a few percent of one core. 0 disables it."""
         self.sink = sink
         self.tolerance_ms = tolerance_ms
         self.invalid_ms = invalid_ms
+        self.spin_s = spin_s
         self.clock = clock
         self.wall = wall
         self.sleep = sleep
+        self.spin = spin or self._busy_wait
         self.flush_timeout_s = flush_timeout_s
+
+    def _busy_wait(self, deadline: float) -> None:
+        while self.clock() < deadline:
+            pass
 
     async def run(self, schedule: Schedule) -> RunStats:
         speed = schedule.speed
@@ -168,8 +192,12 @@ class Pacer:
             d_rel, _, em = heapq.heappop(heap)
             deadline = t0_mono + d_rel
             now = self.clock()
-            if deadline > now:
-                await self.sleep(deadline - now)
+            remaining = deadline - now
+            if remaining > self.spin_s:
+                await self.sleep(remaining - self.spin_s)
+                now = self.clock()
+            if now < deadline:
+                self.spin(deadline)
                 now = self.clock()
             late = now - deadline
             n_scheduled += 1
@@ -227,6 +255,7 @@ class Pacer:
             speed=speed,
             tolerance_ms=self.tolerance_ms,
             invalid_ms=self.invalid_ms,
+            spin_ms=self.spin_s * 1000,
             per_case=per_case,
             per_kind=per_kind,
             sink=self.sink.stats(),

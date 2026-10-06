@@ -67,9 +67,29 @@ def schedule(emitters, speed=1.0, packet_ms=256):
     return Schedule([CasePlan("1", "p", 1000.0, emitters, ())], 30.0, speed, packet_ms)
 
 
-def run(sched, sink, clock, **kw):
-    pacer = Pacer(sink, clock=clock.now, wall=clock.wall, sleep=clock.sleep, **kw)
+def run(sched, sink, clock, spin_s=0.0, **kw):
+    # spin_s=0 by default so these tests exercise pure sleep-to-deadline; the
+    # hybrid wait has its own test below.
+    pacer = Pacer(sink, clock=clock.now, wall=clock.wall, sleep=clock.sleep,
+                  spin=lambda d: setattr(clock, "t", max(clock.t, d)), spin_s=spin_s, **kw)
     return asyncio.run(pacer.run(sched))
+
+
+def test_hybrid_wait_sleeps_short_then_spins_to_the_deadline():
+    clock = SimClock(overshoot_s=0.0)
+    sleeps = []
+    orig = clock.sleep
+
+    async def recording_sleep(d):
+        sleeps.append(d)
+        await orig(d)
+
+    clock.sleep = recording_sleep
+    stats = run(schedule([wave_emitter("1", "W", 5, 0.256)]), NullSink(), clock, spin_s=0.002)
+    # Each sleep stops 2 ms short of the deadline; the spin covers the rest exactly.
+    assert all(abs(s - (0.256 - 0.002)) < 1e-9 for s in sleeps)
+    assert stats.lateness_s.max() == 0.0
+    assert stats.summary()["spin_ms"] == 2.0
 
 
 def test_lateness_does_not_accumulate_with_overshoot():

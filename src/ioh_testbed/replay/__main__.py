@@ -48,8 +48,11 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--data-dir", type=Path, default=Path("data/vitaldb"))
     ap.add_argument("--manifest", type=Path, default=Path("src/ioh_testbed/replay/manifest.json"))
     ap.add_argument("--results", type=Path, default=Path("results"))
-    ap.add_argument("--tolerance-ms", type=float, default=10.0, help="p99 lateness above this is DEGRADED")
-    ap.add_argument("--invalid-ms", type=float, default=1000.0, help="p99 lateness above this is INVALID")
+    ap.add_argument("--tolerance-ms", type=float, default=None,
+                    help="p99 lateness above this is DEGRADED (default: 10%% of packet_ms)")
+    ap.add_argument("--invalid-ms", type=float, default=None,
+                    help="p99 lateness above this is INVALID (default: 100%% of packet_ms)")
+    ap.add_argument("--spin-ms", type=float, default=2.0, help="busy-wait this close to each deadline; 0 disables")
     ap.add_argument("--calibrate", action="store_true", help="sweep speed to find this host's harness ceiling")
     ap.add_argument("--calibrate-wall", type=float, default=30.0, help="wall seconds per calibration step")
     return ap.parse_args(argv)
@@ -70,6 +73,15 @@ def make_sink(args):
     return NullSink(), {}
 
 
+def thresholds_ms(args, packet_ms: int) -> tuple[float, float]:
+    """Cadence-relative by default: harness lateness only bounds offered-load timing
+    fidelity (pipeline latency is measured from LogAppendTime), so what matters is
+    lateness as a fraction of the packet period, not an absolute number."""
+    tol = args.tolerance_ms if args.tolerance_ms is not None else 0.10 * packet_ms
+    inv = args.invalid_ms if args.invalid_ms is not None else 1.00 * packet_ms
+    return tol, inv
+
+
 def new_run_id() -> str:
     return time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + "-" + uuid.uuid4().hex[:6]
 
@@ -84,7 +96,8 @@ def run_once(args, cfg: RunConfig, manifest: list[dict]) -> int:
         file=sys.stderr,
     )
     sink, sink_meta = make_sink(args)
-    stats = asyncio.run(Pacer(sink, tolerance_ms=args.tolerance_ms, invalid_ms=args.invalid_ms).run(schedule))
+    tol, inv = thresholds_ms(args, cfg.scenario.packet_ms)
+    stats = asyncio.run(Pacer(sink, tolerance_ms=tol, invalid_ms=inv, spin_s=args.spin_ms / 1000.0).run(schedule))
 
     run_id = new_run_id()
     out = args.results / run_id
@@ -107,12 +120,13 @@ def calibrate(args, workload: Workload, scenario: Scenario, manifest: list[dict]
     bounds what any experiment on this host can claim: an operating boundary found
     above it would be the instrument's, not the architecture's."""
     rows = []
+    tol, inv = thresholds_ms(args, scenario.packet_ms)
     for speed in CALIBRATION_SPEEDS:
         window = int(min(args.calibrate_wall * speed, CALIBRATION_MAX_WINDOW_S))
         cfg = RunConfig(replace(workload, observation_window_s=window, speed=float(speed)), scenario)
         schedule = build_schedule(cfg, VitalDBSource(args.data_dir), manifest, args.cases)
         sink, _ = make_sink(args)
-        stats = asyncio.run(Pacer(sink, tolerance_ms=args.tolerance_ms, invalid_ms=args.invalid_ms).run(schedule))
+        stats = asyncio.run(Pacer(sink, tolerance_ms=tol, invalid_ms=inv, spin_s=args.spin_ms / 1000.0).run(schedule))
         s = stats.summary()
         wall = s["duration_s"] or 1e-9
         row = {
@@ -146,7 +160,8 @@ def calibrate(args, workload: Workload, scenario: Scenario, manifest: list[dict]
         "workload": workload.name,
         "scenario": scenario.name,
         "packet_ms": scenario.packet_ms,
-        "thresholds_ms": {"tolerance": args.tolerance_ms, "invalid": args.invalid_ms},
+        "thresholds_ms": {"tolerance": tol, "invalid": inv},
+        "spin_ms": args.spin_ms,
         "git": stamp.git_provenance(),
         "config_files": [stamp.file_digest(p) for p in (args.workload, args.scenario)],
         "environment": stamp.environment_descriptor(),
