@@ -28,7 +28,7 @@ from .schedule import build_schedule
 
 # Speed multipliers swept by --calibrate. Each step runs for about --calibrate-wall
 # seconds of wall time; the sweep stops at the first step that is not OK.
-CALIBRATION_SPEEDS = (1, 2, 5, 10, 20, 50, 100, 200, 500)
+CALIBRATION_SPEEDS = (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000)
 # Longest source window a calibration step may use, so every manifest case qualifies.
 CALIBRATION_MAX_WINDOW_S = 3000
 
