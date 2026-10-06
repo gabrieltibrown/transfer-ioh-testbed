@@ -1,0 +1,56 @@
+# Heterogeneous workload: cases cycle through three sensor sets (T9), so per-case
+# load is unequal, which is the uneven-workload mechanism in proposal 2.2.
+# A source track missing from a given case is omitted for that case and recorded
+# in run metadata; in production that is a sensor not attached.
+name: mixed
+observation_window_s: 1800
+speed: 1.0
+assignment: round_robin
+profiles:
+  - name: standard_anaesthesia
+    tracks:
+      - {source: SNUADC/ECG_II,        label: ECG_II,     kind: wave,    target_hz: 500}
+      - {source: SNUADC/ART,           label: ART,        kind: wave,    target_hz: 125}
+      - {source: SNUADC/PLETH,         label: PLETH,      kind: wave,    target_hz: 125}
+      - {source: Primus/AWP,           label: AWP,        kind: wave,    target_hz: 62.5}
+      - {source: Primus/CO2,           label: CO2,        kind: wave,    target_hz: 62.5}
+      - {source: Solar8000/HR,         label: HR,         kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_MBP,    label: ART_MBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_SBP,    label: ART_SBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_DBP,    label: ART_DBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/PLETH_SPO2, label: SPO2,       kind: numeric, target_hz: 1}
+      - {source: Solar8000/ETCO2,      label: ETCO2,      kind: numeric, target_hz: 1}
+      - {source: Solar8000/RR_CO2,     label: RR,         kind: numeric, target_hz: 1}
+      - {source: Solar8000/BT,         label: TEMP,       kind: numeric, target_hz: 1}
+  - name: invasive_cardiac
+    tracks:
+      - {source: SNUADC/ECG_II,        label: ECG_II,     kind: wave,    target_hz: 500}
+      - {source: SNUADC/ECG_V5,        label: ECG_V5,     kind: wave,    target_hz: 500}
+      - {source: SNUADC/ART,           label: ART,        kind: wave,    target_hz: 125}
+      - {source: SNUADC/CVP,           label: CVP,        kind: wave,    target_hz: 125}
+      - {source: SNUADC/PLETH,         label: PLETH,      kind: wave,    target_hz: 125}
+      - {source: Primus/AWP,           label: AWP,        kind: wave,    target_hz: 62.5}
+      - {source: Primus/CO2,           label: CO2,        kind: wave,    target_hz: 62.5}
+      - {source: Solar8000/HR,         label: HR,         kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_MBP,    label: ART_MBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_SBP,    label: ART_SBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_DBP,    label: ART_DBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/CVP,        label: CVP_MEAN,   kind: numeric, target_hz: 1}
+      - {source: Solar8000/PLETH_SPO2, label: SPO2,       kind: numeric, target_hz: 1}
+      - {source: Solar8000/ETCO2,      label: ETCO2,      kind: numeric, target_hz: 1}
+      - {source: Solar8000/RR_CO2,     label: RR,         kind: numeric, target_hz: 1}
+      - {source: Solar8000/BT,         label: TEMP,       kind: numeric, target_hz: 1}
+      - {source: Solar8000/NIBP_MBP,   label: NIBP_MBP,   kind: numeric, target_hz: 1}
+      - {source: Solar8000/VENT_RR,    label: VENT_RR,    kind: numeric, target_hz: 1}
+      - {source: Primus/FIO2,          label: FIO2,       kind: numeric, target_hz: 1}
+      - {source: Primus/MAC,           label: MAC,        kind: numeric, target_hz: 1}
+      - {source: BIS/BIS,              label: BIS,        kind: numeric, target_hz: 1}
+  - name: minimal_monitoring
+    tracks:
+      - {source: SNUADC/ECG_II,        label: ECG_II,     kind: wave,    target_hz: 500}
+      - {source: SNUADC/PLETH,         label: PLETH,      kind: wave,    target_hz: 125}
+      - {source: Solar8000/HR,         label: HR,         kind: numeric, target_hz: 1}
+      - {source: Solar8000/PLETH_SPO2, label: SPO2,       kind: numeric, target_hz: 1}
+      - {source: Solar8000/NIBP_MBP,   label: NIBP_MBP,   kind: numeric, target_hz: 1}
+      - {source: Solar8000/NIBP_SBP,   label: NIBP_SBP,   kind: numeric, target_hz: 1}
+      - {source: Solar8000/NIBP_DBP,   label: NIBP_DBP,   kind: numeric, target_hz: 1}

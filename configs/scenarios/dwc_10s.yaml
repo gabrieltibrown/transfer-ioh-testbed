@@ -1,0 +1,5 @@
+# Baseline cadence hypothesis. Derived from Malunjkar et al. 2021 DWC row counts
+# (docs/stream-model.md 1.2): wave rows are ~10 s blocks. Not measured.
+name: dwc_10s
+packet_ms: 10000
+notes: Data Warehouse Connect estimate; replace with the measured c_n_samples when DWC access lands.

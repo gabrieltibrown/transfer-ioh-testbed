@@ -1,0 +1,24 @@
+# Homogeneous workload: every case runs the standard anaesthesia sensor set.
+# Sources are VitalDB track keys; labels are the DWC-style names emitted.
+# target_hz is the emitted rate: ART and PLETH are decimated 500 -> 125 (T2),
+# Solar8000 numerics are zero-order held 0.5 -> 1 Hz (T4).
+name: standard_anaesthesia
+observation_window_s: 1800
+speed: 1.0
+assignment: round_robin
+profiles:
+  - name: standard_anaesthesia
+    tracks:
+      - {source: SNUADC/ECG_II,        label: ECG_II,     kind: wave,    target_hz: 500}
+      - {source: SNUADC/ART,           label: ART,        kind: wave,    target_hz: 125}
+      - {source: SNUADC/PLETH,         label: PLETH,      kind: wave,    target_hz: 125}
+      - {source: Primus/AWP,           label: AWP,        kind: wave,    target_hz: 62.5}
+      - {source: Primus/CO2,           label: CO2,        kind: wave,    target_hz: 62.5}
+      - {source: Solar8000/HR,         label: HR,         kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_MBP,    label: ART_MBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_SBP,    label: ART_SBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/ART_DBP,    label: ART_DBP,    kind: numeric, target_hz: 1}
+      - {source: Solar8000/PLETH_SPO2, label: SPO2,       kind: numeric, target_hz: 1}
+      - {source: Solar8000/ETCO2,      label: ETCO2,      kind: numeric, target_hz: 1}
+      - {source: Solar8000/RR_CO2,     label: RR,         kind: numeric, target_hz: 1}
+      - {source: Solar8000/BT,         label: TEMP,       kind: numeric, target_hz: 1}
