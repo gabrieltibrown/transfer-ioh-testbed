@@ -17,9 +17,10 @@ dependencies = [
 
 [project.scripts]
 ioh-replay = "ioh_testbed.replay.__main__:main"
+ioh-stub = "ioh_testbed.inference.stub:main"
 
 [dependency-groups]
-dev = ["pytest>=8.0", "ruff>=0.6"]
+dev = ["pytest>=8.0", "ruff>=0.6", "httpx>=0.27"]
 
 [build-system]
 requires = ["hatchling"]
