@@ -211,8 +211,12 @@ class Pacer:
             late = now - deadline
             n_scheduled += 1
 
-            t_sched_wall = t0_wall + d_rel
-            t_produce_wall = t0_wall + (now - t0_mono)
+            # Wall stamps are read from the wall clock at emission, not derived from
+            # the monotonic clock anchored at t0: the broker stamps with the wall clock,
+            # and a slewing host clock (after sleep, NTP) would otherwise show as a
+            # growing producer-to-broker delay. Lateness itself stays monotonic.
+            t_produce_wall = self.wall()
+            t_sched_wall = t_produce_wall - late
             if event_origin is None:
                 event_ts = t0_wall + em.current.t_event_rel / speed
             else:
