@@ -176,7 +176,16 @@ uv run ioh-demo                                                  # http://localh
 ```
 
 Everything shown comes from the pipeline's own Kafka records through a tap
-consumer; the console measures nothing the benchmark does not. Bed replays
+consumer; the console measures nothing the benchmark does not. What the page
+shows (settings, pipeline gauges, every bed's statistics, a 10-minute history
+and an event log of plays, stops and applies, but not the waveforms) is also
+available without the page, for a second pair of eyes or a post-mortem:
+
+```bash
+uv run ioh-demo-snapshot                              # text report from the running server
+uv run ioh-demo-snapshot --json                       # the raw snapshot
+uv run ioh-demo-snapshot --file results/demo/snapshot.json   # refreshed every 2 s; readable after the server stops
+``` Bed replays
 write their harness metadata to `results/demo/` (gitignored). The console is a
 demonstration aid, not an experiment: the thesis numbers come from `ioh-run`.
 
