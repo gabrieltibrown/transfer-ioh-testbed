@@ -1,0 +1,39 @@
+[project]
+name = "ioh-testbed"
+version = "0.1.0"
+description = "Instrumented replay-based testbed for a real-time IOH prediction pipeline"
+requires-python = ">=3.13"
+dependencies = [
+    "vitaldb>=1.4",
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "confluent-kafka>=2.5",
+    "aiohttp>=3.10",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+ioh-replay = "ioh_testbed.replay.__main__:main"
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ioh_testbed"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "vitaldb: needs the cached VitalDB cases under data/ (gitignored); skipped otherwise",
+    "kafka: needs the docker compose Kafka broker running",
+]

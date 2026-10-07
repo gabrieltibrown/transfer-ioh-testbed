@@ -1,0 +1,6 @@
+# Sensitivity scenario. The IntelliVue Data Export Interface delivers 256 ms wave
+# packets (Philips DEI guide, "Interpreting Wave Data"). Applies if the feed is
+# DEI or, plausibly, Capsule MDIP. Not the expected DWC path.
+name: dei_256ms
+packet_ms: 256
+notes: Monitor-native packet cadence; sub-second acquisition floor.

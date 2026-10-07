@@ -1,0 +1,61 @@
+# Testbed infrastructure. Sprint 1: a single KRaft Kafka broker and topic init.
+# Flink, the inference stub and the interface sink arrive in sprint 2.
+#
+#   docker compose --env-file src/compose/profiles/laptop.env -f src/compose/docker-compose.yml up -d
+#
+# Resource limits are explicit so a run on the laptop, the Charite server and a
+# cloud VM can be made identical at the reference profile (docs/stream-model.md).
+# Record the image digest in the sprint findings after pulling.
+
+services:
+  kafka:
+    image: ${KAFKA_IMAGE}
+    container_name: ioh-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      # The harness runs on the host in sprint 1; in-cluster clients come in sprint 2.
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # Topics are created explicitly by kafka-init with LogAppendTime, which is the
+      # authoritative testbed ingress timestamp. No implicit topics.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_MESSAGE_TIMESTAMP_TYPE: LogAppendTime
+      KAFKA_NUM_PARTITIONS: ${KAFKA_PARTITIONS}
+      KAFKA_HEAP_OPTS: -Xms${KAFKA_HEAP} -Xmx${KAFKA_HEAP}
+    mem_limit: ${KAFKA_MEM_LIMIT}
+    cpus: ${KAFKA_CPUS}
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 15s
+
+  kafka-init:
+    image: ${KAFKA_IMAGE}
+    container_name: ioh-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        for t in dwc-waveform dwc-numeric; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+            --topic "$$t" --partitions ${KAFKA_PARTITIONS} --replication-factor 1 \
+            --config message.timestamp.type=LogAppendTime
+        done
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --describe
+    restart: "no"
