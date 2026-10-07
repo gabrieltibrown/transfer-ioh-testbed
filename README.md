@@ -157,6 +157,29 @@ and `lateness_s.npy` (every lateness sample).
 
 Exit codes: 0 for `OK` or `DEGRADED`, 2 for `INVALID`, 3 for a policy refusal.
 
+### Demo console
+
+A web page that runs four beds through the real pipeline: each bed replays one
+VitalDB case as a live monitor feed and draws its waveforms and numerics as they
+arrive, with ingress latency and completeness per bed, the prediction stream
+from the Flink job and the inference stub (risk, latency, completeness, status,
+per-case progress lag), and the pipeline's back-pressure and stub queue in the
+top bar. Shared settings (replay speed, window, inference time and variability,
+workers, what happens when inference falls behind, async capacity, watermark
+bound and idleness) restart the stub and resubmit the Flink job; presets
+reproduce the regimes measured in sprint 03-06.
+
+```bash
+docker compose --env-file src/compose/profiles/laptop.env -f src/compose/docker-compose.yml up -d --wait
+(cd src/ioh_testbed/demo/web && npm install && npm run build)   # once; Node 18+ required
+uv run ioh-demo                                                  # http://localhost:8080
+```
+
+Everything shown comes from the pipeline's own Kafka records through a tap
+consumer; the console measures nothing the benchmark does not. Bed replays
+write their harness metadata to `results/demo/` (gitignored). The console is a
+demonstration aid, not an experiment: the thesis numbers come from `ioh-run`.
+
 ### Harness calibration
 
 ```bash

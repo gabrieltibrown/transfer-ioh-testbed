@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import math
 import subprocess
 import sys
 import threading
@@ -404,7 +405,7 @@ def make_app(demo: Demo) -> FastAPI:
 
 
 def _json_default(o):
-    if isinstance(o, float) and o != o:
+    if isinstance(o, float) and math.isnan(o):
         return None
     if isinstance(o, set):
         return sorted(o)
