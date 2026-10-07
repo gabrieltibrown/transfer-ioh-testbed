@@ -214,13 +214,14 @@ class Demo:
             bed.case, bed.grain, bed.start_at = int(case), grain, float(start_at)
             bed.key = f"{case}-b{index}"
             bed.run_id = f"bed{index}-{time.strftime('%H%M%S')}"
-            bed.state = BedState(bed.key, self.profile.records_per_second(packet_ms), self.shared.speed)
+            rates = {t.label: (1000.0 / packet_ms if t.kind == "wave" else float(t.target_hz)) for t in self.profile.tracks}
+            bed.state = BedState(bed.key, rates, self.shared.speed)
             bed.started_wall = time.time()
             self.tap_beds[bed.key] = bed.state
             duration = min(remaining - 5.0, 4 * 3600.0)
             cmd = [sys.executable, "-m", "ioh_testbed.replay",
                    "--workload", str(WORKLOAD), "--scenario", str(GRAINS[grain]),
-                   "--case-id", str(case), "--key-suffix", f"-b{index}", "--start-at", str(start_at),
+                   "--case-id", str(case), f"--key-suffix=-b{index}", "--start-at", str(start_at),
                    "--duration", str(int(duration)), "--speed", str(self.shared.speed),
                    "--event-origin", repr(self.event_origin),
                    "--sink", "kafka", "--bootstrap", self.bootstrap,
@@ -352,7 +353,7 @@ def make_app(demo: Demo) -> FastAPI:
             await asyncio.get_running_loop().run_in_executor(None, demo.apply, shared)
         except (TypeError, ValueError) as e:
             raise HTTPException(400, str(e)) from e
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             raise HTTPException(500, f"apply failed: {e}") from e
         return demo.state()
 

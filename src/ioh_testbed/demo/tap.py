@@ -59,8 +59,8 @@ def reduce_wave(rec: dict, bucket_s: float = DRAW_BUCKET_S) -> dict:
         "t_first": t0,
         "t_last": float(rec.get("_event_ts_last", t0 + (n - 1) / hz)),
         "n": n,
-        "n_invalid": int(len(rec.get("c_invalid_samples") or [])),
-        "n_unavailable": int(len(rec.get("c_unavailable_samples") or [])),
+        "n_invalid": len(rec.get("c_invalid_samples") or []),
+        "n_unavailable": len(rec.get("c_unavailable_samples") or []),
         "points": points,
     }
 
@@ -82,9 +82,11 @@ def percentile(xs, q: float) -> float:
     return float(np.percentile(a, q)) if a.size else float("nan")
 
 
-def records_due(elapsed_s: float, records_per_s: float) -> float:
-    """Records the schedule implies for the elapsed patient time at this grain and profile."""
-    return max(0.0, elapsed_s) * records_per_s
+def records_due(elapsed_s: float, channel_rates: dict[str, float], seen: set) -> float:
+    """Records the schedule implies for the elapsed patient time, counting only
+    channels this case has produced: a line that was never connected is not
+    missing data, it is absent from the recording."""
+    return max(0.0, elapsed_s) * sum(r for label, r in channel_rates.items() if label in seen)
 
 
 def windows_due(event_now_s: float, first_event_s: float, window_s: float, slide_s: float) -> int:
@@ -103,7 +105,7 @@ def windows_due(event_now_s: float, first_event_s: float, window_s: float, slide
 @dataclass
 class BedState:
     key: str
-    profile_records_per_s: float = 0.0
+    channel_rates: dict[str, float] = field(default_factory=dict)  # label -> records/s at this grain
     speed: float = 1.0
     started_wall: float = 0.0
     first_event: float | None = None
@@ -127,7 +129,7 @@ class BedState:
     new_predictions: list = field(default_factory=list)
 
     def reset(self) -> None:
-        self.__init__(self.key, self.profile_records_per_s, self.speed)
+        self.__init__(self.key, self.channel_rates, self.speed)
 
     def add_wave(self, rec: dict, t_append_s: float) -> None:
         red = reduce_wave(rec)
@@ -183,7 +185,7 @@ class BedState:
         now = now or time.time()
         recent = [x for x in self.recent_ingress if now - x[0] <= 30.0]
         elapsed_patient = (self.last_event - self.first_event) if self.first_event is not None and self.last_event else 0.0
-        due = records_due(elapsed_patient, self.profile_records_per_s)
+        due = records_due(elapsed_patient, self.channel_rates, self.channels_seen)
         if delta:
             waves, numerics, preds = self.new_waves, self.new_numerics, self.new_predictions
             self.new_waves, self.new_numerics, self.new_predictions = [], [], []
@@ -214,6 +216,7 @@ class BedState:
                 "completeness": min(1.0, self.n_records / due) if due > 0 else None,
                 "invalid_fraction": self.n_invalid_samples / self.n_samples if self.n_samples else 0.0,
                 "channels": sorted(self.channels_seen),
+                "channels_expected": sorted(self.channel_rates),
             },
             "predictions": preds,
             "prediction_stats": {

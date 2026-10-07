@@ -58,7 +58,8 @@ def test_play_validates_and_spawns(demo):
     b = r.json()
     assert b["status"] == "running" and b["key"] == f"{first}-b0" and b["grain"] == "dei_256ms"
     assert f"{first}-b0" in demo.tap_beds
-    assert demo.tap_beds[f"{first}-b0"].profile_records_per_s == pytest.approx(5 * 1000 / 256 + 8)
+    rates = demo.tap_beds[f"{first}-b0"].channel_rates
+    assert rates["ECG_II"] == pytest.approx(1000 / 256) and rates["HR"] == 1.0 and len(rates) == 13
     r = c.post("/api/beds/0/stop")
     assert r.json()["status"] == "idle" and f"{first}-b0" not in demo.tap_beds
 

@@ -60,7 +60,7 @@ def test_windows_due_on_epoch_grid():
 
 
 def test_bed_state_frame_counts_completeness_and_deltas():
-    bed = BedState("1-b0", profile_records_per_s=8.5)
+    bed = BedState("1-b0", channel_rates={"ART": 0.1, "HR": 1.0, "SPO2": 1.0})
     t0 = 1.7e9
     bed.add_wave(wave(t0=t0), t0 + 10.0 + 0.003)
     for i in range(10):
@@ -69,8 +69,9 @@ def test_bed_state_frame_counts_completeness_and_deltas():
     f = bed.frame(60.0, 20.0, now=t0 + 11)
     assert f["ingress"]["n_records"] == 11 and f["ingress"]["n_wave"] == 1 and f["ingress"]["n_numeric"] == 10
     assert f["elapsed_patient_s"] == pytest.approx(9.998)
-    # 9.998 s of patient time at 8.5 rec/s -> 85 due; 11 received (waves and numerics start together)
-    assert f["ingress"]["completeness"] == pytest.approx(11 / (9.998 * 8.5))
+    # 9.998 s of patient time on the channels seen (ART 0.1/s + HR 1/s; SPO2 never appeared) -> 11 due
+    assert f["ingress"]["completeness"] == pytest.approx(min(1.0, 11 / (9.998 * 1.1)))
+    assert f["ingress"]["channels_expected"] == ["ART", "HR", "SPO2"]
     assert f["ingress"]["delay_p50"] == pytest.approx(0.002, abs=2e-3)
     assert f["ingress"]["channels"] == ["ART", "HR"]
     assert len(f["waves"]) == 1 and len(f["numerics"]) == 10
@@ -84,7 +85,7 @@ def test_bed_state_frame_counts_completeness_and_deltas():
 
 
 def test_bed_state_predictions_and_progress():
-    bed = BedState("1-b0", profile_records_per_s=8.5)
+    bed = BedState("1-b0", channel_rates={"HR": 1.0})
     t0 = 1.7e9
     bed.add_numeric(numeric_record(case_id="1", label="HR", seq=1, event_ts=t0, value=70.0, unit="/min",
                                    t_sched=t0, t_produce=t0), t0)
