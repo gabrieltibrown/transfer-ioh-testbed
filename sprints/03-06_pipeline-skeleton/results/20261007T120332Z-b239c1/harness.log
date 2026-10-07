@@ -1,0 +1,64 @@
+scheduled 20 cases, 237 streams, window 600 s, packet 10000 ms, built in 8.1 s
+wrote results/20261007T120332Z-b239c1/meta.json
+{
+  "run_id": "20261007T120332Z-b239c1",
+  "verdict": "OK",
+  "latency_results_valid": true,
+  "n_scheduled": 79951,
+  "n_emitted": 79951,
+  "n_backpressure": 0,
+  "n_undelivered": 0,
+  "duration_s": 599.97,
+  "offered_records_per_s": 133.26,
+  "lateness_ms": {
+    "N": 79951,
+    "p50": 0.108,
+    "p90": 0.753,
+    "p99": 22.002,
+    "max": 36.638,
+    "n_over_tolerance": 0
+  },
+  "thresholds_ms": {
+    "tolerance": 1000.0,
+    "invalid": 10000.0
+  },
+  "spin_ms": 2.0,
+  "speed": 1.0,
+  "t0_wall": 1791374628.6278021,
+  "per_case": {
+    "12": 3952,
+    "7": 3883,
+    "28": 3589,
+    "31": 4077,
+    "20": 4037,
+    "1": 3931,
+    "34": 3378,
+    "22": 4306,
+    "25": 4260,
+    "4": 3991,
+    "29": 3877,
+    "13": 3280,
+    "26": 4253,
+    "17": 4093,
+    "38": 4099,
+    "16": 4111,
+    "19": 4598,
+    "27": 3745,
+    "24": 4583,
+    "10": 3908
+  },
+  "per_kind": {
+    "wave": 5723,
+    "numeric": 74228
+  },
+  "sink": {
+    "sink": "kafka",
+    "bootstrap": "localhost:9092",
+    "acks": "all",
+    "linger_ms": 5,
+    "delivered": 79951,
+    "failed": 0,
+    "bytes": 93477175,
+    "last_error": null
+  }
+}

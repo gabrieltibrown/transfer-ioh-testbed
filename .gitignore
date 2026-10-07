@@ -33,3 +33,6 @@ venv/
 
 # Per-run scratch output; curated results are copied into sprints/
 /results/
+
+# Maven build output (the job jar is built in the flink-build container)
+src/flink/target/

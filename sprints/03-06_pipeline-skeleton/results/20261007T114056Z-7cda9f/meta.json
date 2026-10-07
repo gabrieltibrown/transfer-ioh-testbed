@@ -1,0 +1,511 @@
+{
+  "run_id": "20261007T114056Z-7cda9f",
+  "git": {
+    "commit": "5a97ecbd482a0bfea17b2d34fb6cceab2b2abcdd",
+    "describe": "sprint/01-02-17-g5a97ecb",
+    "branch": "sprint/03-06-pipeline-skeleton",
+    "dirty": true
+  },
+  "config_files": [
+    {
+      "path": "configs/workload/standard_anaesthesia.yaml",
+      "sha256": "59136deeadcea25a84729fe6174dfdbbb871aa9f921f72d8b7af86cbc6e9d089",
+      "bytes": 1573
+    },
+    {
+      "path": "configs/scenarios/dwc_10s.yaml",
+      "sha256": "42e0a2b772f150fd8c3e5bdaf582a1b5b1bf34e52921f2901cd6f023352de3c8",
+      "bytes": 285
+    }
+  ],
+  "environment": {
+    "hostname": "WAE-CYHWD4J653",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "machine": "arm64",
+    "host_cpus": 8,
+    "host_mem_bytes": 8589934592,
+    "python": "3.13.5",
+    "uv": "uv 0.8.13 (Homebrew 2025-08-21)",
+    "docker": {
+      "available": true,
+      "server_version": "29.1.3",
+      "vm_cpus": 8,
+      "vm_mem_bytes": 5157793792,
+      "containers": {
+        "ioh-flink-tm": {
+          "image": "flink:2.2.1-java17",
+          "image_digest": "flink@sha256:140c3909f06cbea741be78fc630e809fae9dadcbfa492a684acf39efbbf68946",
+          "image_id": "sha256:140c3909f06cbea741be78fc630e809fae9dadcbfa492a684acf39efbbf68946",
+          "mem_limit_bytes": 2147483648,
+          "cpus": 3.0
+        },
+        "ioh-kafka": {
+          "image": "apache/kafka:4.0.0",
+          "image_digest": "apache/kafka@sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75",
+          "image_id": "sha256:3f7b939115cd4872e9cee9369d80bd69712fde55f9902f46d793f64848dedc75",
+          "mem_limit_bytes": 1610612736,
+          "cpus": 2.0
+        },
+        "ioh-flink-jm": {
+          "image": "flink:2.2.1-java17",
+          "image_digest": "flink@sha256:140c3909f06cbea741be78fc630e809fae9dadcbfa492a684acf39efbbf68946",
+          "image_id": "sha256:140c3909f06cbea741be78fc630e809fae9dadcbfa492a684acf39efbbf68946",
+          "mem_limit_bytes": 1073741824,
+          "cpus": 1.0
+        }
+      }
+    },
+    "clock_domain": "single-host"
+  },
+  "config": {
+    "workload": "standard_anaesthesia",
+    "scenario": "dwc_10s",
+    "packet_ms": 10000,
+    "observation_window_s": 600,
+    "speed": 1.0,
+    "assignment": "round_robin",
+    "profiles": [
+      {
+        "name": "standard_anaesthesia",
+        "tracks": [
+          {
+            "source": "SNUADC/ECG_II",
+            "label": "ECG_II",
+            "kind": "wave",
+            "target_hz": 500
+          },
+          {
+            "source": "SNUADC/ART",
+            "label": "ART",
+            "kind": "wave",
+            "target_hz": 125
+          },
+          {
+            "source": "SNUADC/PLETH",
+            "label": "PLETH",
+            "kind": "wave",
+            "target_hz": 125
+          },
+          {
+            "source": "Primus/AWP",
+            "label": "AWP",
+            "kind": "wave",
+            "target_hz": 62.5
+          },
+          {
+            "source": "Primus/CO2",
+            "label": "CO2",
+            "kind": "wave",
+            "target_hz": 62.5
+          },
+          {
+            "source": "Solar8000/HR",
+            "label": "HR",
+            "kind": "numeric",
+            "target_hz": 1
+          },
+          {
+            "source": "Solar8000/ART_MBP",
+            "label": "ART_MBP",
+            "kind": "numeric",
+            "target_hz": 1
+          },
+          {
+            "source": "Solar8000/ART_SBP",
+            "label": "ART_SBP",
+            "kind": "numeric",
+            "target_hz": 1
+          },
+          {
+            "source": "Solar8000/ART_DBP",
+            "label": "ART_DBP",
+            "kind": "numeric",
+            "target_hz": 1
+          },
+          {
+            "source": "Solar8000/PLETH_SPO2",
+            "label": "SPO2",
+            "kind": "numeric",
+            "target_hz": 1
+          },
+          {
+            "source": "Solar8000/ETCO2",
+            "label": "ETCO2",
+            "kind": "numeric",
+            "target_hz": 1
+          },
+          {
+            "source": "Solar8000/RR_CO2",
+            "label": "RR",
+            "kind": "numeric",
+            "target_hz": 1
+          },
+          {
+            "source": "Solar8000/BT",
+            "label": "TEMP",
+            "kind": "numeric",
+            "target_hz": 1
+          }
+        ],
+        "records_per_second": 8.5
+      }
+    ]
+  },
+  "schedule": {
+    "n_cases": 20,
+    "window_s": 600.0,
+    "speed": 1.0,
+    "packet_ms": 10000,
+    "cases": [
+      {
+        "case_id": "1",
+        "profile": "standard_anaesthesia",
+        "n_streams": 13,
+        "missing_sources": [],
+        "late_start_sources": []
+      },
+      {
+        "case_id": "4",
+        "profile": "standard_anaesthesia",
+        "n_streams": 13,
+        "missing_sources": [],
+        "late_start_sources": []
+      },
+      {
+        "case_id": "7",
+        "profile": "standard_anaesthesia",
+        "n_streams": 11,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT",
+          "Solar8000/RR_CO2"
+        ]
+      },
+      {
+        "case_id": "10",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "12",
+        "profile": "standard_anaesthesia",
+        "n_streams": 9,
+        "missing_sources": [
+          "SNUADC/PLETH"
+        ],
+        "late_start_sources": [
+          "SNUADC/ART",
+          "SNUADC/ECG_II",
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "13",
+        "profile": "standard_anaesthesia",
+        "n_streams": 10,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT",
+          "Solar8000/ETCO2",
+          "Solar8000/RR_CO2"
+        ]
+      },
+      {
+        "case_id": "16",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "17",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "19",
+        "profile": "standard_anaesthesia",
+        "n_streams": 13,
+        "missing_sources": [],
+        "late_start_sources": []
+      },
+      {
+        "case_id": "20",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "22",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "24",
+        "profile": "standard_anaesthesia",
+        "n_streams": 13,
+        "missing_sources": [],
+        "late_start_sources": []
+      },
+      {
+        "case_id": "25",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "26",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "27",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "28",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "29",
+        "profile": "standard_anaesthesia",
+        "n_streams": 11,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/ETCO2",
+          "Solar8000/RR_CO2"
+        ]
+      },
+      {
+        "case_id": "31",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "34",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      },
+      {
+        "case_id": "38",
+        "profile": "standard_anaesthesia",
+        "n_streams": 12,
+        "missing_sources": [],
+        "late_start_sources": [
+          "Solar8000/BT"
+        ]
+      }
+    ]
+  },
+  "result": {
+    "verdict": "OK",
+    "latency_results_valid": true,
+    "n_scheduled": 79951,
+    "n_emitted": 79951,
+    "n_backpressure": 0,
+    "n_undelivered": 0,
+    "duration_s": 599.971,
+    "offered_records_per_s": 133.26,
+    "lateness_ms": {
+      "N": 79951,
+      "p50": 0.103,
+      "p90": 0.763,
+      "p99": 21.291,
+      "max": 41.738,
+      "n_over_tolerance": 0
+    },
+    "thresholds_ms": {
+      "tolerance": 1000.0,
+      "invalid": 10000.0
+    },
+    "spin_ms": 2.0,
+    "speed": 1.0,
+    "t0_wall": 1791373272.3878558,
+    "per_case": {
+      "12": 3952,
+      "7": 3883,
+      "28": 3589,
+      "31": 4077,
+      "20": 4037,
+      "1": 3931,
+      "34": 3378,
+      "22": 4306,
+      "25": 4260,
+      "4": 3991,
+      "29": 3877,
+      "13": 3280,
+      "26": 4253,
+      "17": 4093,
+      "38": 4099,
+      "16": 4111,
+      "19": 4598,
+      "27": 3745,
+      "24": 4583,
+      "10": 3908
+    },
+    "per_kind": {
+      "wave": 5723,
+      "numeric": 74228
+    },
+    "sink": {
+      "sink": "kafka",
+      "bootstrap": "localhost:9092",
+      "acks": "all",
+      "linger_ms": 5,
+      "delivered": 79951,
+      "failed": 0,
+      "bytes": 93482657,
+      "last_error": null
+    }
+  },
+  "env": "laptop",
+  "source": "vitaldb",
+  "sink": "kafka",
+  "schedule_build_s": 7.47,
+  "topics": {
+    "dwc-waveform": {
+      "partitions": 8,
+      "message.timestamp.type": "LogAppendTime"
+    },
+    "dwc-numeric": {
+      "partitions": 8,
+      "message.timestamp.type": "LogAppendTime"
+    }
+  },
+  "pipeline_config": {
+    "path": "configs/pipeline/laptop.yaml",
+    "sha256": "393ba83d59fea94e1dc71c8f0f99f8d6050f9e714d2ad94248361fe1bb559f96",
+    "bytes": 1103
+  },
+  "job": {
+    "id": "5ed296cf3c3f706e2d54877f8fb969e3",
+    "jar": "src/flink/target/ioh-pipeline-0.2.0.jar",
+    "args": [
+      "--bootstrap",
+      "kafka:29092",
+      "--group-id",
+      "ioh-flink-20261007T114056Z-7cda9f",
+      "--window-ms",
+      "60000",
+      "--slide-ms",
+      "20000",
+      "--watermark-bound-ms",
+      "500",
+      "--idleness-ms",
+      "5000",
+      "--progress-interval-ms",
+      "1000",
+      "--inference-url",
+      "http://host.docker.internal:8000/predict",
+      "--inference-capacity",
+      "8",
+      "--inference-timeout-ms",
+      "10000",
+      "--checkpoint-ms",
+      "10000",
+      "--parallelism",
+      "2",
+      "--run-id",
+      "20261007T114056Z-7cda9f"
+    ],
+    "config": {
+      "bootstrap": "kafka:29092",
+      "group_id": "ioh-flink-20261007T114056Z-7cda9f",
+      "window_ms": 60000,
+      "slide_ms": 20000,
+      "watermark_bound_ms": 500,
+      "idleness_ms": 5000,
+      "progress_interval_ms": 1000,
+      "inference_url": "http://host.docker.internal:8000/predict",
+      "inference_capacity_per_subtask": 8,
+      "inference_capacity_total": 16,
+      "inference_timeout_ms": 10000,
+      "checkpoint_ms": 10000,
+      "parallelism": 2
+    },
+    "flink_version": "2.2.1"
+  },
+  "stub": {
+    "config": {
+      "service_ms": 2000.0,
+      "service_cv": 0.0,
+      "workers": 1,
+      "queue_max": 1000,
+      "seed": 0,
+      "port": 8000
+    },
+    "final_stats": {
+      "requests": 600,
+      "served": 311,
+      "rejected": 0,
+      "in_flight": 1,
+      "queued": 288,
+      "max_queued": 304,
+      "max_in_flight": 1,
+      "service_ms_mean": 2000.0,
+      "queue_wait_ms_mean": 160833.85979860925,
+      "queue_wait_ms_max": 317674.77202415466
+    }
+  },
+  "clock": {
+    "start": {
+      "n": 20,
+      "min_s": -0.0021419525146484375,
+      "median_s": -0.0016279220581054688,
+      "max_s": 0.00849294662475586
+    },
+    "end": {
+      "n": 20,
+      "min_s": -0.002415180206298828,
+      "median_s": -0.0019068717956542969,
+      "max_s": 0.009483814239501953
+    },
+    "offset_s": -0.0021419525146484375,
+    "note": "vm = host + offset_s; min of LogAppendTime - t_produce over probes, includes one-way transit"
+  },
+  "drain_s": 30.0,
+  "harness_exit": 0,
+  "label": "async saturated: 20 cases, stub 2000 ms x1 worker"
+}

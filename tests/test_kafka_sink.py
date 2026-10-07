@@ -11,8 +11,8 @@ import numpy as np
 import pytest
 
 from ioh_testbed.replay.config import WAVE
-from ioh_testbed.replay.packetize import WavePacket
 from ioh_testbed.replay.pacer import TOPIC_NUMERIC, TOPIC_WAVE, Pacer
+from ioh_testbed.replay.packetize import WavePacket
 from ioh_testbed.replay.reader import SampleStream
 from ioh_testbed.replay.schedule import CasePlan, Emission, Schedule, StreamEmitter
 
@@ -69,6 +69,7 @@ def test_topics_have_log_append_time(broker):
 
 def test_round_trip_counts_keys_and_broker_timestamps(broker):
     from confluent_kafka import TIMESTAMP_LOG_APPEND_TIME
+
     from ioh_testbed.replay.kafka_sink import KafkaSink
 
     case_id = f"t{uuid.uuid4().hex[:8]}"
@@ -86,9 +87,10 @@ def test_round_trip_counts_keys_and_broker_timestamps(broker):
         ts_type, ts_ms = m.timestamp()
         rec = json.loads(m.value())
         assert ts_type == TIMESTAMP_LOG_APPEND_TIME
-        # Broker append time is the ingress reference: never before the producer handed it over.
-        # Same host, same clock; allow 1 ms for broker timestamp granularity.
-        assert ts_ms / 1000.0 >= rec["_t_produce"] - 0.001, (ts_ms / 1000.0, rec["_t_produce"])
+        # Broker append time is the ingress reference: never before the producer handed it over,
+        # up to the host-to-VM clock offset. The broker runs on the Docker VM clock, measured
+        # 1 to 4 ms behind the host (sprint 03-06 findings); ioh-run probes and records it per run.
+        assert ts_ms / 1000.0 >= rec["_t_produce"] - 0.010, (ts_ms / 1000.0, rec["_t_produce"])
         assert rec["_case_id"] == case_id
     seqs = sorted(json.loads(m.value())["c_sequence_number"] for m in waves)
     assert seqs == list(range(1, 21))

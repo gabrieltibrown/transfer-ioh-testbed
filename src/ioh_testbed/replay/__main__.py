@@ -48,6 +48,7 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--data-dir", type=Path, default=Path("data/vitaldb"))
     ap.add_argument("--manifest", type=Path, default=Path("src/ioh_testbed/replay/manifest.json"))
     ap.add_argument("--results", type=Path, default=Path("results"))
+    ap.add_argument("--run-id", default=None, help="use this run id instead of generating one (set by ioh-run)")
     ap.add_argument("--tolerance-ms", type=float, default=None,
                     help="p99 lateness above this is DEGRADED (default: 10%% of packet_ms)")
     ap.add_argument("--invalid-ms", type=float, default=None,
@@ -99,7 +100,7 @@ def run_once(args, cfg: RunConfig, manifest: list[dict]) -> int:
     tol, inv = thresholds_ms(args, cfg.scenario.packet_ms)
     stats = asyncio.run(Pacer(sink, tolerance_ms=tol, invalid_ms=inv, spin_s=args.spin_ms / 1000.0).run(schedule))
 
-    run_id = new_run_id()
+    run_id = args.run_id or new_run_id()
     out = args.results / run_id
     stamp.write_run(
         out, run_id=run_id, config_paths=[args.workload, args.scenario],

@@ -25,7 +25,7 @@ import json
 import sys
 import urllib.request
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pyarrow.compute as pc
@@ -130,7 +130,7 @@ def main() -> int:
     manifest = {
         "source": "VitalDB open dataset (Lee et al. 2022)",
         "api": API,
-        "fetched_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "fetched_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "required_waves": list(REQUIRED_WAVES),
         "required_numerics": list(REQUIRED_NUMERICS),
         "selection": "lowest catalogue-eligible case ids, ascending, accepted only if the "

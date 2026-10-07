@@ -94,6 +94,7 @@ class RunStats:
     tolerance_ms: float
     invalid_ms: float
     spin_ms: float = 0.0
+    t0_wall: float = 0.0  # run origin on the host clock; window alignment downstream depends on it
     per_case: dict[str, int] = field(default_factory=dict)
     per_kind: dict[str, int] = field(default_factory=dict)
     sink: dict = field(default_factory=dict)
@@ -135,6 +136,7 @@ class RunStats:
             "thresholds_ms": {"tolerance": self.tolerance_ms, "invalid": self.invalid_ms},
             "spin_ms": self.spin_ms,
             "speed": self.speed,
+            "t0_wall": self.t0_wall,
             "per_case": self.per_case,
             "per_kind": self.per_kind,
             "sink": self.sink,
@@ -151,7 +153,7 @@ class Pacer:
         spin_s: float = 0.002,
         clock: Callable[[], float] = time.monotonic,
         wall: Callable[[], float] = time.time,
-        sleep: Callable[[float], "asyncio.Future"] = asyncio.sleep,
+        sleep: Callable[[float], asyncio.Future] = asyncio.sleep,
         spin: Callable[[float], None] | None = None,
         flush_timeout_s: float = 30.0,
     ):
@@ -204,7 +206,7 @@ class Pacer:
 
             t_sched_wall = t0_wall + d_rel
             t_produce_wall = t0_wall + (now - t0_mono)
-            event_ts = t0_wall + em.current.t_rel / speed
+            event_ts = t0_wall + em.current.t_event_rel / speed
             seq = seqs.next(em.case_id, em.label)
             if em.kind == WAVE:
                 topic = TOPIC_WAVE
@@ -256,6 +258,7 @@ class Pacer:
             tolerance_ms=self.tolerance_ms,
             invalid_ms=self.invalid_ms,
             spin_ms=self.spin_s * 1000,
+            t0_wall=t0_wall,
             per_case=per_case,
             per_kind=per_kind,
             sink=self.sink.stats(),
