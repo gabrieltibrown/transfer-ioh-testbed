@@ -67,12 +67,12 @@ def schedule(emitters, speed=1.0, packet_ms=256):
     return Schedule([CasePlan("1", "p", 1000.0, emitters, ())], 30.0, speed, packet_ms)
 
 
-def run(sched, sink, clock, spin_s=0.0, **kw):
+def run(sched, sink, clock, spin_s=0.0, event_origin=None, **kw):
     # spin_s=0 by default so these tests exercise pure sleep-to-deadline; the
     # hybrid wait has its own test below.
     pacer = Pacer(sink, clock=clock.now, wall=clock.wall, sleep=clock.sleep,
                   spin=lambda d: setattr(clock, "t", max(clock.t, d)), spin_s=spin_s, **kw)
-    return asyncio.run(pacer.run(sched))
+    return asyncio.run(pacer.run(sched, event_origin=event_origin))
 
 
 def test_hybrid_wait_sleeps_short_then_spins_to_the_deadline():
@@ -191,3 +191,21 @@ def test_real_clock_smoke_run_is_ok_within_tolerance():
     emitters = [wave_emitter("1", "A", 20, 0.005), numeric_emitter("1", "HR", 20, 0.005)]
     stats = asyncio.run(Pacer(NullSink(), tolerance_ms=50.0).run(schedule(emitters)))
     assert stats.n_scheduled == 40 and stats.verdict == "OK", stats.summary()
+
+
+def test_event_origin_runs_event_time_at_speed_from_shared_epoch():
+    # Two replays at speed 4 started 10 s apart must agree on event time at any wall instant.
+    origin = 1.7e9 - 100.0
+    out = []
+    for start_t in (1000.0, 1010.0):  # SimClock wall = 1.7e9 + (t - 1000): starts 10 s apart
+        clock = SimClock()
+        clock.t = start_t
+        sink = CapturingSink()
+        run(schedule([numeric_emitter("1", "HR", 5, 1.0)], speed=4.0), sink, clock, event_origin=origin)
+        out.append([(r["_t_sched"], r["_event_ts"]) for _, _, r in sink.records])
+    for recs in out:
+        for t_sched, ev in recs:
+            assert ev == pytest.approx(origin + (t_sched - origin) * 4.0)
+    # consecutive records 1 s apart in source time are 0.25 s apart in wall and 1 s apart in event time
+    assert out[0][1][0] - out[0][0][0] == pytest.approx(0.25)
+    assert out[0][1][1] - out[0][0][1] == pytest.approx(1.0)

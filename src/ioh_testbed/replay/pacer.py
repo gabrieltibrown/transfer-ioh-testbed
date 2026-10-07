@@ -95,6 +95,7 @@ class RunStats:
     invalid_ms: float
     spin_ms: float = 0.0
     t0_wall: float = 0.0  # run origin on the host clock; window alignment downstream depends on it
+    event_origin: float | None = None  # shared epoch when event time runs at speed x wall (demo)
     per_case: dict[str, int] = field(default_factory=dict)
     per_kind: dict[str, int] = field(default_factory=dict)
     sink: dict = field(default_factory=dict)
@@ -137,6 +138,7 @@ class RunStats:
             "spin_ms": self.spin_ms,
             "speed": self.speed,
             "t0_wall": self.t0_wall,
+            "event_origin": self.event_origin,
             "per_case": self.per_case,
             "per_kind": self.per_kind,
             "sink": self.sink,
@@ -175,7 +177,12 @@ class Pacer:
         while self.clock() < deadline:
             pass
 
-    async def run(self, schedule: Schedule) -> RunStats:
+    async def run(self, schedule: Schedule, event_origin: float | None = None) -> RunStats:
+        """``event_origin``: when given, event time is ``origin + (t0_wall - origin) * speed
+        + t_event_rel``, i.e. it advances at ``speed`` times wall from a shared epoch,
+        so concurrent replays started at different times agree on event time and a
+        downstream window of N seconds is N seconds of patient time. Without it event
+        time is compressed onto wall time as in the benchmark runs."""
         speed = schedule.speed
         seqs = SequenceCounter()
         lateness: list[float] = []
@@ -206,7 +213,10 @@ class Pacer:
 
             t_sched_wall = t0_wall + d_rel
             t_produce_wall = t0_wall + (now - t0_mono)
-            event_ts = t0_wall + em.current.t_event_rel / speed
+            if event_origin is None:
+                event_ts = t0_wall + em.current.t_event_rel / speed
+            else:
+                event_ts = event_origin + (t0_wall - event_origin) * speed + em.current.t_event_rel
             seq = seqs.next(em.case_id, em.label)
             if em.kind == WAVE:
                 topic = TOPIC_WAVE
@@ -259,6 +269,7 @@ class Pacer:
             invalid_ms=self.invalid_ms,
             spin_ms=self.spin_s * 1000,
             t0_wall=t0_wall,
+            event_origin=event_origin,
             per_case=per_case,
             per_kind=per_kind,
             sink=self.sink.stats(),

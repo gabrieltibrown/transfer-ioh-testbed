@@ -80,7 +80,8 @@ class CaseData:
 
 class Source(Protocol):
     def read_case(
-        self, caseid: int | str, wanted: Iterable[str], window_s: float | None = None
+        self, caseid: int | str, wanted: Iterable[str], window_s: float | None = None,
+        start_s: float = 0.0,
     ) -> CaseData: ...
 
 
@@ -89,10 +90,11 @@ class VitalDBSource:
         self.data_dir = Path(data_dir)
 
     def read_case(
-        self, caseid: int | str, wanted: Iterable[str], window_s: float | None = None
+        self, caseid: int | str, wanted: Iterable[str], window_s: float | None = None,
+        start_s: float = 0.0,
     ) -> CaseData:
         return read_vitaldb_case(
-            self.data_dir / f"{caseid}.parquet", wanted, caseid=caseid, window_s=window_s
+            self.data_dir / f"{caseid}.parquet", wanted, caseid=caseid, window_s=window_s, start_s=start_s
         )
 
 
@@ -101,6 +103,9 @@ _COLUMNS = ["dt", "dname", "tname", "unit", "ivals", "fvals", "nval", "srate", "
 # Slack past the window when cropping, so the block that straddles the window end
 # is read in full. Source blocks are ~1 s.
 _CROP_SLACK_S = 2.0
+# Slack before a start offset: the numeric observation held into the window may be
+# up to one Primus period (6.4 s) earlier; waves need one block.
+_START_SLACK_S = 10.0
 
 
 def read_vitaldb_case(
@@ -108,10 +113,11 @@ def read_vitaldb_case(
     wanted: Iterable[str],
     caseid: int | str | None = None,
     window_s: float | None = None,
+    start_s: float = 0.0,
 ) -> CaseData:
-    """``window_s`` crops reading to the first ``window_s`` seconds of the case, since
-    a run only replays its observation window. ``t_start``/``t_end`` still describe
-    the whole recording."""
+    """``window_s`` crops reading to ``window_s`` seconds of the case starting
+    ``start_s`` seconds in, since a run only replays its observation window.
+    ``t_start``/``t_end`` still describe the whole recording."""
     wanted = set(wanted)
     caseid = caseid if caseid is not None else Path(path).stem
 
@@ -129,7 +135,9 @@ def read_vitaldb_case(
     # track that merely starts after the window is not reported as absent.
     present = set(pc.unique(key.filter(mask)).to_pylist())
     if window_s is not None:
-        mask = pc.and_(mask, pc.less_equal(table["dt"], t_start + window_s + _CROP_SLACK_S))
+        mask = pc.and_(mask, pc.less_equal(table["dt"], t_start + start_s + window_s + _CROP_SLACK_S))
+    if start_s > 0:
+        mask = pc.and_(mask, pc.greater_equal(table["dt"], t_start + start_s - _START_SLACK_S))
     table = table.filter(mask)
     key = key.filter(mask)
     df = table.to_pandas()

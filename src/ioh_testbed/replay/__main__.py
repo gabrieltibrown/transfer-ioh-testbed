@@ -38,6 +38,12 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--workload", required=True, type=Path)
     ap.add_argument("--scenario", required=True, type=Path, help="states packet_ms; there is no default")
     ap.add_argument("--cases", type=int, default=1, help="concurrent cases, all starting at t0")
+    ap.add_argument("--case-id", type=int, action="append", default=None,
+                    help="replay this manifest case (repeatable) instead of the first --cases eligible ones")
+    ap.add_argument("--key-suffix", default="", help="appended to the case id used as Kafka key and p_patnr")
+    ap.add_argument("--start-at", type=float, default=0.0, help="begin this many seconds into each recording")
+    ap.add_argument("--event-origin", type=float, default=None,
+                    help="shared epoch: event time runs at speed x wall from it (demo); default compresses onto wall")
     ap.add_argument("--duration", type=float, help="observation window in seconds (overrides workload)")
     ap.add_argument("--speed", type=float, help="replay rate multiplier (overrides workload); != 1 invalidates latency results")
     ap.add_argument("--sink", choices=["null", "kafka"], default="null")
@@ -89,7 +95,8 @@ def new_run_id() -> str:
 
 def run_once(args, cfg: RunConfig, manifest: list[dict]) -> int:
     t = time.perf_counter()
-    schedule = build_schedule(cfg, VitalDBSource(args.data_dir), manifest, args.cases)
+    schedule = build_schedule(cfg, VitalDBSource(args.data_dir), manifest, args.cases,
+                              case_ids=args.case_id, key_suffix=args.key_suffix, start_s=args.start_at)
     build_s = time.perf_counter() - t
     print(
         f"scheduled {len(schedule.cases)} cases, {len(schedule.emitters)} streams, "
@@ -98,7 +105,8 @@ def run_once(args, cfg: RunConfig, manifest: list[dict]) -> int:
     )
     sink, sink_meta = make_sink(args)
     tol, inv = thresholds_ms(args, cfg.scenario.packet_ms)
-    stats = asyncio.run(Pacer(sink, tolerance_ms=tol, invalid_ms=inv, spin_s=args.spin_ms / 1000.0).run(schedule))
+    stats = asyncio.run(Pacer(sink, tolerance_ms=tol, invalid_ms=inv, spin_s=args.spin_ms / 1000.0)
+                        .run(schedule, event_origin=args.event_origin))
 
     run_id = args.run_id or new_run_id()
     out = args.results / run_id
@@ -107,7 +115,8 @@ def run_once(args, cfg: RunConfig, manifest: list[dict]) -> int:
         config=cfg.describe(), schedule=schedule.describe(), result=stats.summary(),
         lateness_s=stats.lateness_s,
         extra={"env": args.env, "source": args.source, "sink": args.sink,
-               "schedule_build_s": round(build_s, 2), **sink_meta},
+               "schedule_build_s": round(build_s, 2), "case_ids": args.case_id,
+               "key_suffix": args.key_suffix, "start_at_s": args.start_at, **sink_meta},
     )
     print(json.dumps({"run_id": run_id, **stats.summary()}, indent=2))
     print(f"wrote {out}/meta.json", file=sys.stderr)

@@ -121,3 +121,41 @@ def test_real_cases_schedule_quickly_with_window_crop():
     assert time.perf_counter() - t < 20
     assert len(sched.cases) == 3
     assert all(len(c.emitters) >= 10 for c in sched.cases)
+
+
+def test_explicit_case_ids_in_given_order_and_key_suffix(tmp_path, vitaldb_case_factory):
+    for cid in (3, 7):
+        vitaldb_case_factory(f"{cid}.parquet", waves={"SNUADC/ART": {**ART, "blocks": blocks(1000.0, 500, 40)}})
+    tracks = [{"source": "SNUADC/ART", "label": "ART", "kind": "wave", "target_hz": 125}]
+    cfg = RunConfig(small_workload(tmp_path, tracks=tracks), scenario(10000))
+    manifest = [{"caseid": 3, "duration_s": 40}, {"caseid": 5, "duration_s": 40}, {"caseid": 7, "duration_s": 40}]
+    sched = build_schedule(cfg, VitalDBSource(tmp_path), manifest, 1, case_ids=[7, 3], key_suffix="-b2")
+    assert [c.case_id for c in sched.cases] == ["7-b2", "3-b2"]
+    assert all(e.case_id == "7-b2" for e in sched.cases[0].emitters)
+    with pytest.raises(ValueError, match="not in the manifest"):
+        select_cases(manifest, 1, 30, case_ids=[9])
+    with pytest.raises(ValueError, match="shorter"):
+        select_cases(manifest, 1, 30, case_ids=[3], start_s=20)
+
+
+def test_start_at_rebases_every_stream_from_the_offset(tmp_path, vitaldb_case_factory):
+    # 100 s of ART from 1000, HR every 2 s; start 30 s in with a 30 s window.
+    vitaldb_case_factory("1.parquet",
+        waves={"SNUADC/ART": {**ART, "blocks": blocks(1000.0, 500, 100)}},
+        numerics={"Solar8000/HR": {"unit": "/min", "points": [(1000.0 + 2 * i, 60 + i) for i in range(50)]}})
+    cfg = RunConfig(small_workload(tmp_path, window=30, tracks=[
+        {"source": "SNUADC/ART", "label": "ART", "kind": "wave", "target_hz": 125},
+        {"source": "Solar8000/HR", "label": "HR", "kind": "numeric", "target_hz": 1}]), scenario(10000))
+    sched = build_schedule(cfg, VitalDBSource(tmp_path), [{"caseid": 1, "duration_s": 100}], 1, start_s=30)
+    case = sched.cases[0]
+    assert case.t_start == 1030.0
+    by = {e.label: e for e in case.emitters}
+    pk = []
+    while by["ART"].advance():
+        pk.append(by["ART"].current)
+    # packets complete at 40, 50 (and 60 is outside the 30 s window): emitted at t_rel 10 and 20
+    assert [round(e.t_rel) for e in pk] == [10, 20] and [round(e.t_event_rel) for e in pk] == [0, 10]
+    hr = []
+    while by["HR"].advance():
+        hr.append(by["HR"].current)
+    assert len(hr) == 30 and hr[0].t_rel == 0.0 and hr[0].payload == 60 + 15  # observation at 1030 is index 15
