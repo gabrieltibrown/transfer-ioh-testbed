@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from ioh_testbed.demo.tap import BedState, ingress_terms, reduce_wave, windows_due
+from ioh_testbed.demo.tap import BedState, ingress_terms, percentile, reduce_wave, windows_due
 from ioh_testbed.replay.packetize import WavePacket
 from ioh_testbed.replay.reader import SampleStream
 from ioh_testbed.replay.records import numeric_record, wave_record
@@ -104,3 +104,11 @@ def test_bed_state_predictions_and_progress():
     assert ps["n_due"] == windows_due(t0 + 100, t0, 60, 20) and ps["completeness"] == pytest.approx(1 / ps["n_due"])
     assert f["predictions"][0]["inference_s"] == pytest.approx(0.06)
     assert f["progress_lag_s"] == pytest.approx(0.5)
+
+
+def test_empty_statistics_are_none_not_nan():
+    assert percentile([], 50) is None
+    assert percentile([float("nan")], 50) is None
+    bed = BedState("1-b0", channel_rates={"HR": 1.0})
+    f = bed.frame(60.0, 20.0, now=1.7e9)
+    assert f["ingress"]["delay_p50"] is None and f["prediction_stats"]["latency_p50"] is None

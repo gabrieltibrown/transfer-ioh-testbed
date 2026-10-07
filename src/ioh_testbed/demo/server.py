@@ -378,13 +378,12 @@ def make_app(demo: Demo) -> FastAPI:
     async def ws(sock: WebSocket):
         await sock.accept()
         try:
-            await sock.send_text(json.dumps({"type": "snapshot", "state": demo.state(), "frames": demo.frames(delta=False)},
-                                            default=_json_default))
+            await sock.send_text(dumps({"type": "snapshot", "state": demo.state(), "frames": demo.frames(delta=False)}))
             while True:
                 await asyncio.sleep(0.1)
                 msg = {"type": "frame", "t": time.time(), "frames": demo.frames(delta=True),
                        "pipeline": demo.state()["pipeline"], "beds": [b.public() for b in demo.beds]}
-                await sock.send_text(json.dumps(msg, default=_json_default))
+                await sock.send_text(dumps(msg))
         except WebSocketDisconnect:
             return
         except Exception:  # noqa: BLE001
@@ -405,11 +404,26 @@ def make_app(demo: Demo) -> FastAPI:
 
 
 def _json_default(o):
-    if isinstance(o, float) and math.isnan(o):
-        return None
     if isinstance(o, set):
         return sorted(o)
     raise TypeError(type(o))
+
+
+def sanitize(o):
+    """Replace NaN and infinities with null recursively. ``json.dumps`` writes them
+    as bare tokens that are not JSON; a browser's ``JSON.parse`` then throws and
+    the whole frame is lost."""
+    if isinstance(o, float):
+        return None if (math.isnan(o) or math.isinf(o)) else o
+    if isinstance(o, dict):
+        return {k: sanitize(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [sanitize(v) for v in o]
+    return o
+
+
+def dumps(o) -> str:
+    return json.dumps(sanitize(o), default=_json_default, allow_nan=False)
 
 
 def main(argv=None) -> int:

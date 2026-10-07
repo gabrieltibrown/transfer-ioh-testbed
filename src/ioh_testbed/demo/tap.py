@@ -77,9 +77,11 @@ def ingress_terms(rec: dict, t_append_s: float) -> dict:
     }
 
 
-def percentile(xs, q: float) -> float:
+def percentile(xs, q: float) -> float | None:
+    """None, not NaN, when there is nothing to summarise: NaN is not JSON and the
+    browser rejects a whole message that contains it."""
     a = np.asarray([x for x in xs if not (isinstance(x, float) and math.isnan(x))], dtype=float)
-    return float(np.percentile(a, q)) if a.size else float("nan")
+    return float(np.percentile(a, q)) if a.size else None
 
 
 def records_due(elapsed_s: float, channel_rates: dict[str, float], seen: set) -> float:

@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ioh_testbed.demo import server as srv
-from ioh_testbed.demo.server import Demo, Shared, make_app
+from ioh_testbed.demo.server import Demo, Shared, dumps, make_app
 
 
 class FakeProc:
@@ -80,3 +80,10 @@ def test_config_endpoint_rejects_bad_body(demo):
     c = TestClient(make_app(demo))
     assert c.post("/api/config", json={"failure_style": "drop"}).status_code == 400
     assert c.post("/api/config", json={"unknown_key": 1}).status_code == 400
+
+
+def test_websocket_messages_never_contain_nan_tokens():
+    import json as _json
+    raw = dumps({"a": float("nan"), "b": [1.0, float("inf")], "c": {"d": float("-inf"), "e": 2}})
+    assert "NaN" not in raw and "Infinity" not in raw
+    assert _json.loads(raw) == {"a": None, "b": [1.0, None], "c": {"d": None, "e": 2}}
