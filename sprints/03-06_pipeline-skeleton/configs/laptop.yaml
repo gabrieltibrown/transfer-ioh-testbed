@@ -9,8 +9,7 @@ flink:
   window_ms: 60000            # trailing window per case
   slide_ms: 20000             # prediction cadence (HPI-like)
   watermark_bound_ms: 500     # bounded out-of-orderness; an additive term in the latency floor
-  idleness_ms: 1000           # a waveform split holds the watermark back after each 10 s burst until
-                              # declared idle, so this is an additive latency term; see sprint 03-06 findings
+  idleness_ms: 5000           # short: a 1-case run leaves most partitions idle
   progress_interval_ms: 1000
   inference_url: http://host.docker.internal:8000/predict
   inference_capacity: 8       # per subtask; in-flight total = capacity x parallelism

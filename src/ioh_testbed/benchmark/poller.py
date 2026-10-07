@@ -27,8 +27,10 @@ TASK_METRICS = (
     "busyTimeMsPerSecond", "idleTimeMsPerSecond", "numRecordsInPerSecond", "numRecordsOutPerSecond",
     "currentInputWatermark",
 )
-OPERATOR_SUFFIXES = (".pendingRecords", ".numLateRecordsDropped", ".numRecordsOutPerSecond", ".currentOutputWatermark")
+OPERATOR_SUFFIXES = (".pendingRecords", ".records-lag-max", ".currentEmitEventTimeLag", ".numLateRecordsDropped",
+                     ".numRecordsOutPerSecond", ".currentOutputWatermark")
 SUM_METRICS = ("numRecordsInPerSecond", "numRecordsOutPerSecond", "pendingRecords", "numLateRecordsDropped")
+# records-lag-max and currentEmitEventTimeLag are per-subtask maxima and keep the max aggregate.
 CONTAINERS = ("ioh-kafka", "ioh-flink-jm", "ioh-flink-tm")
 
 

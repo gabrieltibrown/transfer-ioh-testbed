@@ -114,8 +114,9 @@ def analyze(run_dir: Path, slope_tolerance: float | None = None) -> dict:
 
 
 def summarize_poller(rows: list[dict]) -> dict:
-    """Max back-pressure and busy time per vertex, max pending records at the source,
-    and peak container memory, over the run."""
+    """Max back-pressure and busy time per vertex, max Kafka lag at the source
+    (``pendingRecords`` or the consumer's ``records-lag-max``), and peak container
+    memory, over the run."""
     bp: dict[str, float] = defaultdict(float)
     busy: dict[str, float] = defaultdict(float)
     pending = 0.0
@@ -126,8 +127,9 @@ def summarize_poller(rows: list[dict]) -> dict:
             name = v.get("name", "?").split(" -> ")[0].replace("Source: ", "")
             bp[name] = max(bp[name], float(v.get("backPressuredTimeMsPerSecond", 0) or 0))
             busy[name] = max(busy[name], float(v.get("busyTimeMsPerSecond", 0) or 0))
-            if v.get("pendingRecords") is not None:
-                pending = max(pending, float(v["pendingRecords"]))
+            for key in ("pendingRecords", "records-lag-max"):
+                if v.get(key) is not None:
+                    pending = max(pending, float(v[key]))
         for name, st in r.get("docker", {}).items():
             mem[name] = max(mem[name], float(st.get("mem_bytes", 0) or 0))
             cpu[name] = max(cpu[name], float(st.get("cpu_pct", 0) or 0))
