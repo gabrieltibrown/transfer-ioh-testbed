@@ -124,6 +124,12 @@ def _s(v, unit="s", digits=2) -> str:
     return f"{v}"
 
 
+def _num(v, digits=1) -> str:
+    if v is None or (isinstance(v, float) and (v != v)):
+        return "--"
+    return f"{v:.{digits}f}" if isinstance(v, float) else str(v)
+
+
 def _clock(t: float) -> str:
     return time.strftime("%H:%M:%S", time.localtime(t))
 
@@ -161,8 +167,8 @@ def render_text(snap: dict) -> str:
     out.append("Pipeline")
     lights = " ".join(f"{k}={'on' if pipe.get(k) else 'OFF'}" for k in ("kafka", "flink", "stub"))
     out.append(f"  {lights} | job {pipe.get('job_state')} {pipe.get('job_id') or ''} | clock offset {(pipe.get('clock_offset_s') or 0) * 1000:.1f} ms")
-    out.append(f"  source back-pressure {m.get('source_backpressure_ms_s')} ms/s | window+inference busy {m.get('features_busy_ms_s')} ms/s | "
-               f"source in {m.get('source_records_in_s')} rec/s | kafka lag {m.get('kafka_lag_max')}")
+    out.append(f"  source back-pressure {_num(m.get('source_backpressure_ms_s'))} ms/s | window+inference busy {_num(m.get('features_busy_ms_s'))} ms/s | "
+               f"source in {_num(m.get('source_records_in_s'))} rec/s | kafka lag {_num(m.get('kafka_lag_max'), 0)}")
     out.append(f"  stub: {stub.get('in_flight', '--')} in flight, {stub.get('queued', '--')} queued, {stub.get('served', '--')} served, "
                f"{stub.get('rejected', '--')} rejected, max queued {stub.get('max_queued', '--')}")
     if pipe.get("message"):

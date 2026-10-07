@@ -122,6 +122,7 @@ class Demo:
         self.profile = self.workload.profile_for(0)
         self.manifest = json.loads(MANIFEST.read_text())["cases"]
         self.beds = [Bed(i) for i in range(N_BEDS)]
+        self.play_counter = 0  # makes every Play a fresh Flink key, so no stale windows carry over
         self.event_origin = time.time()
         self.offset_s = 0.0
         self.tap_beds: dict[str, BedState] = {}
@@ -222,7 +223,9 @@ class Demo:
             self._stop_bed(bed)
             packet_ms = Scenario.load(GRAINS[grain]).packet_ms
             bed.case, bed.grain, bed.start_at = int(case), grain, float(start_at)
-            bed.key = f"{case}-b{index}"
+            self.play_counter += 1
+            suffix = f"-b{index}s{self.play_counter}"
+            bed.key = f"{case}{suffix}"
             bed.run_id = f"bed{index}-{time.strftime('%H%M%S')}"
             rates = {t.label: (1000.0 / packet_ms if t.kind == "wave" else float(t.target_hz)) for t in self.profile.tracks}
             bed.state = BedState(bed.key, rates, self.shared.speed)
@@ -231,7 +234,7 @@ class Demo:
             duration = min(remaining - 5.0, 4 * 3600.0)
             cmd = [sys.executable, "-m", "ioh_testbed.replay",
                    "--workload", str(WORKLOAD), "--scenario", str(GRAINS[grain]),
-                   "--case-id", str(case), f"--key-suffix=-b{index}", "--start-at", str(start_at),
+                   "--case-id", str(case), f"--key-suffix={suffix}", "--start-at", str(start_at),
                    "--duration", str(int(duration)), "--speed", str(self.shared.speed),
                    "--event-origin", repr(self.event_origin),
                    "--sink", "kafka", "--bootstrap", self.bootstrap,

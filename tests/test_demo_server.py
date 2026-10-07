@@ -56,12 +56,16 @@ def test_play_validates_and_spawns(demo):
     r = c.post("/api/beds/0/play", json={"case": first, "grain": "dei_256ms", "start_at": 30})
     assert r.status_code == 200
     b = r.json()
-    assert b["status"] == "running" and b["key"] == f"{first}-b0" and b["grain"] == "dei_256ms"
-    assert f"{first}-b0" in demo.tap_beds
-    rates = demo.tap_beds[f"{first}-b0"].channel_rates
+    assert b["status"] == "running" and b["key"].startswith(f"{first}-b0s") and b["grain"] == "dei_256ms"
+    key = b["key"]
+    assert key in demo.tap_beds
+    rates = demo.tap_beds[key].channel_rates
     assert rates["ECG_II"] == pytest.approx(1000 / 256) and rates["HR"] == 1.0 and len(rates) == 13
     r = c.post("/api/beds/0/stop")
-    assert r.json()["status"] == "idle" and f"{first}-b0" not in demo.tap_beds
+    assert r.json()["status"] == "idle" and key not in demo.tap_beds
+    # a second play of the same case on the same bed gets a fresh key, so no Flink window state carries over
+    r2 = c.post("/api/beds/0/play", json={"case": first, "grain": "dwc_10s"})
+    assert r2.json()["key"] != key and r2.json()["key"].startswith(f"{first}-b0s")
 
 
 def test_shared_validation_and_failure_style_mapping():

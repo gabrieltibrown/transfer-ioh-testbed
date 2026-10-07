@@ -84,16 +84,25 @@ def percentile(xs, q: float) -> float | None:
     return float(np.percentile(a, q)) if a.size else None
 
 
-def records_due(elapsed_s: float, channel_rates: dict[str, float], seen: set) -> float:
-    """Records the schedule implies for the elapsed patient time, counting only
-    channels this case has produced: a line that was never connected is not
-    missing data, it is absent from the recording."""
-    return max(0.0, elapsed_s) * sum(r for label, r in channel_rates.items() if label in seen)
+PREDICTION_GRACE_S = 2.0  # wall seconds a due window may take to arrive before it counts as missing
 
 
-def windows_due(event_now_s: float, first_event_s: float, window_s: float, slide_s: float) -> int:
+def records_due(last_event_s: float, channel_first: dict[str, float], channel_rates: dict[str, float]) -> float:
+    """Records the schedule implies so far: for each channel this case has produced,
+    its rate times the time since that channel's own first record. A channel that
+    was never connected is absent from the recording, not missing; one that
+    connects late is counted from when it did."""
+    return sum(
+        channel_rates.get(label, 0.0) * max(0.0, last_event_s - t_first)
+        for label, t_first in channel_first.items()
+    )
+
+
+def windows_due(event_now_s: float, first_event_s: float, window_s: float, slide_s: float, grace_s: float = 0.0) -> int:
     """Full windows that could have fired by ``event_now`` for a case whose first
-    event was at ``first_event``, on the epoch-aligned slide grid."""
+    event was at ``first_event``, on the epoch-aligned slide grid. ``grace_s``
+    allows for delivery time so a window is not counted missing while in flight."""
+    event_now_s -= grace_s
     # The first full window starts at the first slide-grid point at or after the
     # first event and ends one window later; windows fire once event time passes the end.
     first_full_end = math.ceil(first_event_s / slide_s) * slide_s + window_s
@@ -122,6 +131,7 @@ class BedState:
     n_invalid_samples: int = 0
     n_samples: int = 0
     channels_seen: set = field(default_factory=set)
+    channel_first: dict[str, float] = field(default_factory=dict)  # label -> event time of its first record
     predictions: deque = field(default_factory=lambda: deque(maxlen=200))
     progress: deque = field(default_factory=lambda: deque(maxlen=600))
     n_pred_by_status: dict[str, int] = field(default_factory=dict)
@@ -155,6 +165,7 @@ class BedState:
     def _seen(self, rec: dict, t_append_s: float, t_first: float, t_last: float) -> None:
         self.n_records += 1
         self.channels_seen.add(rec["c_label"])
+        self.channel_first[rec["c_label"]] = min(self.channel_first.get(rec["c_label"], t_first), t_first)
         self.first_event = t_first if self.first_event is None else min(self.first_event, t_first)
         self.last_event = t_last if self.last_event is None else max(self.last_event, t_last)
         terms = ingress_terms(rec, t_append_s)
@@ -189,9 +200,10 @@ class BedState:
         now = now or time.time()
         recent = [x for x in self.recent_ingress if now - x[0] <= 30.0]
         elapsed_patient = (self.last_event - self.first_event) if self.first_event is not None and self.last_event else 0.0
-        due = records_due(elapsed_patient, self.channel_rates, self.channels_seen)
+        due = records_due(self.last_event, self.channel_first, self.channel_rates) if self.last_event else 0.0
         preds_ok = [p for p in self.predictions if p["status"] == "ok" and not p["partial"]]
-        n_due = windows_due(self.last_event, self.first_event, window_s, slide_s) if self.first_event is not None and self.last_event else 0
+        n_due = (windows_due(self.last_event, self.first_event, window_s, slide_s, PREDICTION_GRACE_S * self.speed)
+                 if self.first_event is not None and self.last_event else 0)
         n_full = sum(1 for p in self.predictions if not p["partial"])
         prog = self.progress[-1] if self.progress else None
         return {

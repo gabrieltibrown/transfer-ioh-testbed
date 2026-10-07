@@ -69,7 +69,7 @@ def test_bed_state_frame_counts_completeness_and_deltas():
     f = bed.frame(60.0, 20.0, now=t0 + 11)
     assert f["ingress"]["n_records"] == 11 and f["ingress"]["n_wave"] == 1 and f["ingress"]["n_numeric"] == 10
     assert f["elapsed_patient_s"] == pytest.approx(9.998)
-    # 9.998 s of patient time on the channels seen (ART 0.1/s + HR 1/s; SPO2 never appeared) -> 11 due
+    # due per channel from its own first record: ART 0.1/s and HR 1/s over 9.998 s; SPO2 never appeared
     assert f["ingress"]["completeness"] == pytest.approx(min(1.0, 11 / (9.998 * 1.1)))
     assert f["ingress"]["channels_expected"] == ["ART", "HR", "SPO2"]
     assert f["ingress"]["delay_p50"] == pytest.approx(0.002, abs=2e-3)
@@ -82,6 +82,11 @@ def test_bed_state_frame_counts_completeness_and_deltas():
     # a full snapshot still has everything
     f3 = bed.frame(60.0, 20.0, now=t0 + 11, delta=False)
     assert len(f3["waves"]) == 1 and len(f3["numerics"]) == 10
+    # a channel that connects late is counted from when it did
+    bed.add_numeric(numeric_record(case_id="1", label="SPO2", seq=1, event_ts=t0 + 8, value=98.0, unit="%",
+                                   t_sched=t0 + 8, t_produce=t0 + 8), t0 + 8)
+    f_late = bed.frame(60.0, 20.0, now=t0 + 11)
+    assert f_late["ingress"]["completeness"] == pytest.approx(min(1.0, 12 / (9.998 * 1.1 + 1.998 * 1.0)))
 
 
 def test_bed_state_predictions_and_progress():
@@ -101,7 +106,8 @@ def test_bed_state_predictions_and_progress():
     assert ps["n"] == 1 and ps["by_status"] == {"ok": 1} and ps["last_risk"] == 0.42
     assert ps["latency_p50"] == pytest.approx(1.2)
     assert ps["staleness_p50"] == pytest.approx(1.7)
-    assert ps["n_due"] == windows_due(t0 + 100, t0, 60, 20) and ps["completeness"] == pytest.approx(1 / ps["n_due"])
+    assert ps["n_due"] == windows_due(t0 + 100, t0, 60, 20, 2.0) and ps["completeness"] == pytest.approx(1 / ps["n_due"])
+    assert windows_due(1080, 1005, 60, 20, grace_s=2.0) == 0 and windows_due(1082, 1005, 60, 20, grace_s=2.0) == 1
     assert f["predictions"][0]["inference_s"] == pytest.approx(0.06)
     assert f["progress_lag_s"] == pytest.approx(0.5)
 
