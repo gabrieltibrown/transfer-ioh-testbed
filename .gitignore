@@ -36,3 +36,7 @@ venv/
 
 # Maven build output (the job jar is built in the flink-build container)
 src/flink/target/
+
+# Demo front end build output and dependencies
+src/ioh_testbed/demo/web/node_modules/
+src/ioh_testbed/demo/web/dist/
