@@ -72,12 +72,21 @@ def analyze(run_dir: Path, slope_tolerance: float | None = None) -> dict:
         diff = np.array([t["t_pipeline"] - t["fetch"] - t["t_pipeline_broker"] for t in full])
         out["clock_check_max_abs_s"] = float(np.abs(diff).max())
 
-    # per-case progress lag and its slope over the window
+    # per-case progress lag and its slope over the observation window only: the
+    # heartbeat keeps running through the drain period after the replay ends, when
+    # lag grows by construction because nothing new is offered.
+    t0 = meta.get("result", {}).get("t0_wall")
+    window_s = meta.get("schedule", {}).get("window_s")
     series: dict[str, list[tuple[float, float]]] = defaultdict(list)
+    n_outside = 0
     for h in prog:
         if h.get("type") != "progress":
             continue
-        series[h["caseId"]].append((clock.host(h["tWallMs"]), progress_lag(h, clock)))
+        t = clock.host(h["tWallMs"])
+        if t0 is not None and window_s is not None and not (t0 <= t <= t0 + window_s):
+            n_outside += 1
+            continue
+        series[h["caseId"]].append((t, progress_lag(h, clock)))
     lag_out: dict = {}
     slopes = []
     for c, pts in sorted(series.items()):
@@ -89,6 +98,7 @@ def analyze(run_dir: Path, slope_tolerance: float | None = None) -> dict:
         if s["n"] >= 3:
             slopes.append(s["slope"])
     out["progress_lag"] = {
+        "window": {"t0_wall": t0, "window_s": window_s, "heartbeats_outside": n_outside},
         "per_case": lag_out,
         "slope_s_per_s": percentiles(slopes, qs=(50, 90, 100)) if slopes else {"N": 0},
     }

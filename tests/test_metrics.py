@@ -65,7 +65,8 @@ def test_percentiles_drop_nan():
 
 
 def test_analyze_run_folder(tmp_path):
-    meta = {"run_id": "r", "clock": {"offset_s": 0.0}, "job": {"config": {"watermark_bound_ms": 500}}}
+    meta = {"run_id": "r", "clock": {"offset_s": 0.0}, "job": {"config": {"watermark_bound_ms": 500}},
+            "result": {"t0_wall": 1000.0}, "schedule": {"window_s": 20.0}}  # heartbeats after 1020 s are drain
     (tmp_path / "meta.json").write_text(json.dumps(meta))
     preds = [pred(case="1", end_ms=1_000_000 + 20_000 * k, append_newest=990_500 + 20_000 * k,
                   fired=1_000_700 + 20_000 * k, sent=1_000_710 + 20_000 * k, ret=1_000_760 + 20_000 * k,
@@ -82,6 +83,7 @@ def test_analyze_run_folder(tmp_path):
     assert s["latency_s"]["t_pipeline"]["p50"] == pytest.approx(10.27)
     assert s["clock_check_max_abs_s"] < 1e-9
     case1 = s["progress_lag"]["per_case"]["1"]
+    assert case1["n"] == 21 and s["progress_lag"]["window"]["heartbeats_outside"] == 9
     assert case1["slope"] == pytest.approx(0.010, abs=1e-6)  # lag grows 10 ms per second
     assert s["stability"]["verdict"] == "degrading"
     assert (tmp_path / "summary.json").exists()
