@@ -40,4 +40,5 @@ testpaths = ["tests"]
 markers = [
     "vitaldb: needs the cached VitalDB cases under data/ (gitignored); skipped otherwise",
     "kafka: needs the docker compose Kafka broker running",
+    "e2e: needs a finished ioh-run folder and the cached VitalDB data",
 ]
