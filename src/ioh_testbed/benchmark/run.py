@@ -51,6 +51,9 @@ def parse_args(argv=None) -> argparse.Namespace:
     ap.add_argument("--stub-queue-max", type=int, default=None)
     ap.add_argument("--inference-capacity", type=int, default=None, help="override pipeline.flink.inference_capacity")
     ap.add_argument("--parallelism", type=int, default=None, help="override pipeline.flink.parallelism")
+    ap.add_argument("--idleness-ms", type=int, default=None, help="override pipeline.flink.idleness_ms")
+    ap.add_argument("--watermark-bound-ms", type=int, default=None, help="override pipeline.flink.watermark_bound_ms")
+    ap.add_argument("--inference-timeout-ms", type=int, default=None, help="override pipeline.flink.inference_timeout_ms")
     ap.add_argument("--drain", type=float, default=None, help="seconds to wait after the replay (default: pipeline.run.drain_s)")
     ap.add_argument("--label", default="", help="free-text note stored in meta.json")
     return ap.parse_args(argv)
@@ -240,24 +243,27 @@ def main(argv=None) -> int:
     }
     capacity = args.inference_capacity if args.inference_capacity is not None else fl["inference_capacity"]
     parallelism = args.parallelism if args.parallelism is not None else fl.get("parallelism", -1)
+    idleness = args.idleness_ms if args.idleness_ms is not None else fl["idleness_ms"]
+    bound = args.watermark_bound_ms if args.watermark_bound_ms is not None else fl["watermark_bound_ms"]
+    inf_timeout = args.inference_timeout_ms if args.inference_timeout_ms is not None else fl["inference_timeout_ms"]
     drain = args.drain if args.drain is not None else float(rn.get("drain_s", 30))
     job_args = [
         "--bootstrap", fl["bootstrap_in_cluster"],
         "--group-id", f"ioh-flink-{run_id}",
         "--window-ms", str(fl["window_ms"]), "--slide-ms", str(fl["slide_ms"]),
-        "--watermark-bound-ms", str(fl["watermark_bound_ms"]), "--idleness-ms", str(fl["idleness_ms"]),
+        "--watermark-bound-ms", str(bound), "--idleness-ms", str(idleness),
         "--progress-interval-ms", str(fl.get("progress_interval_ms", 1000)),
         "--inference-url", fl["inference_url"], "--inference-capacity", str(capacity),
-        "--inference-timeout-ms", str(fl["inference_timeout_ms"]), "--checkpoint-ms", str(fl["checkpoint_ms"]),
+        "--inference-timeout-ms", str(inf_timeout), "--checkpoint-ms", str(fl["checkpoint_ms"]),
         "--parallelism", str(parallelism), "--run-id", run_id,
     ]
     job_cfg = {
         "bootstrap": fl["bootstrap_in_cluster"], "group_id": f"ioh-flink-{run_id}",
-        "window_ms": fl["window_ms"], "slide_ms": fl["slide_ms"], "watermark_bound_ms": fl["watermark_bound_ms"],
-        "idleness_ms": fl["idleness_ms"], "progress_interval_ms": fl.get("progress_interval_ms", 1000),
+        "window_ms": fl["window_ms"], "slide_ms": fl["slide_ms"], "watermark_bound_ms": bound,
+        "idleness_ms": idleness, "progress_interval_ms": fl.get("progress_interval_ms", 1000),
         "inference_url": fl["inference_url"], "inference_capacity_per_subtask": capacity,
         "inference_capacity_total": capacity * max(parallelism, 1),
-        "inference_timeout_ms": fl["inference_timeout_ms"], "checkpoint_ms": fl["checkpoint_ms"],
+        "inference_timeout_ms": inf_timeout, "checkpoint_ms": fl["checkpoint_ms"],
         "parallelism": parallelism,
     }
 

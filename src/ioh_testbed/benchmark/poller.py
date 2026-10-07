@@ -18,11 +18,17 @@ from pathlib import Path
 
 import httpx
 
-VERTEX_METRICS = (
-    "backPressuredTimeMsPerSecond", "busyTimeMsPerSecond", "idleTimeMsPerSecond",
-    "numRecordsInPerSecond", "numRecordsOutPerSecond", "pendingRecords",
-    "currentInputWatermark", "numLateRecordsDropped",
+# Task-scoped metric names, present on every vertex; operator-scoped ones carry the
+# operator name as a prefix ("Source__dwc-source.pendingRecords") and are matched by
+# suffix. The REST endpoint returns nothing at all if any requested name is unknown,
+# so the request is built from the vertex's own metric list.
+TASK_METRICS = (
+    "backPressuredTimeMsPerSecond", "hardBackPressuredTimeMsPerSecond", "softBackPressuredTimeMsPerSecond",
+    "busyTimeMsPerSecond", "idleTimeMsPerSecond", "numRecordsInPerSecond", "numRecordsOutPerSecond",
+    "currentInputWatermark",
 )
+OPERATOR_SUFFIXES = (".pendingRecords", ".numLateRecordsDropped", ".numRecordsOutPerSecond", ".currentOutputWatermark")
+SUM_METRICS = ("numRecordsInPerSecond", "numRecordsOutPerSecond", "pendingRecords", "numLateRecordsDropped")
 CONTAINERS = ("ioh-kafka", "ioh-flink-jm", "ioh-flink-tm")
 
 
@@ -32,30 +38,46 @@ class FlinkMetrics:
         self.job_id = job_id
         self.client = httpx.Client(timeout=3.0)
         self.vertices: list[tuple[str, str]] = []
+        self.wanted: dict[str, list[str]] = {}
 
     def discover(self) -> None:
         r = self.client.get(f"{self.rest}/jobs/{self.job_id}")
         r.raise_for_status()
         self.vertices = [(v["id"], v["name"]) for v in r.json().get("vertices", [])]
+        for vid, _ in self.vertices:
+            try:
+                avail = {m["id"] for m in self.client.get(f"{self.rest}/jobs/{self.job_id}/vertices/{vid}/subtasks/metrics").json()}
+            except Exception:  # noqa: BLE001
+                avail = set()
+            self.wanted[vid] = sorted(
+                {m for m in TASK_METRICS if m in avail} | {m for m in avail if m.endswith(OPERATOR_SUFFIXES)}
+            )
+
+    def _have_metrics(self) -> bool:
+        return any(self.wanted.values())
 
     def sample(self) -> dict:
-        if not self.vertices:
+        # The metric store fills ~10 s after the job starts; rediscover until it has.
+        if not self.vertices or not self._have_metrics():
             self.discover()
         out = {"vertices": []}
         for vid, name in self.vertices:
-            try:
-                r = self.client.get(
-                    f"{self.rest}/jobs/{self.job_id}/vertices/{vid}/subtasks/metrics",
-                    params={"get": ",".join(VERTEX_METRICS), "agg": "max,sum"},
-                )
-                row = {"id": vid, "name": name}
-                for m in r.json():
-                    row[m["id"]] = m.get("max")
-                    if m["id"] in ("numRecordsInPerSecond", "numRecordsOutPerSecond", "pendingRecords", "numLateRecordsDropped"):
-                        row[m["id"]] = m.get("sum")
-                out["vertices"].append(row)
-            except Exception as e:  # noqa: BLE001
-                out["vertices"].append({"id": vid, "name": name, "error": str(e)})
+            row = {"id": vid, "name": name}
+            names = self.wanted.get(vid, [])
+            if names:
+                try:
+                    r = self.client.get(
+                        f"{self.rest}/jobs/{self.job_id}/vertices/{vid}/subtasks/metrics",
+                        params={"get": ",".join(names), "agg": "max,sum"},
+                    )
+                    for m in r.json():
+                        key = m["id"].split(".")[-1] if m["id"].endswith(OPERATOR_SUFFIXES) else m["id"]
+                        if key in row and key.startswith("numRecordsOutPerSecond"):
+                            continue  # keep the task-level figure, not the operator's
+                        row[key] = m.get("sum") if key in SUM_METRICS else m.get("max")
+                except Exception as e:  # noqa: BLE001
+                    row["error"] = str(e)
+            out["vertices"].append(row)
         try:
             c = self.client.get(f"{self.rest}/jobs/{self.job_id}/checkpoints").json()
             counts = c.get("counts", {})

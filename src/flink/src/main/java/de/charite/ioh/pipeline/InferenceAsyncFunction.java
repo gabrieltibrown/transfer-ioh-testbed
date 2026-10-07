@@ -13,6 +13,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Calls the inference service without blocking the operator. The number of
@@ -29,6 +32,8 @@ public class InferenceAsyncFunction extends RichAsyncFunction<FeatureVector, Pre
     private final long timeoutMs;
     private transient HttpClient client;
     private transient ObjectMapper mapper;
+    /** In-flight requests, so an operator timeout cancels the HTTP call instead of leaving it queued at the service. */
+    private transient Map<FeatureVector, CompletableFuture<?>> inFlight;
 
     public InferenceAsyncFunction(String url, long timeoutMs) {
         this.url = url;
@@ -39,6 +44,7 @@ public class InferenceAsyncFunction extends RichAsyncFunction<FeatureVector, Pre
     public void open(OpenContext openContext) {
         client = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(timeoutMs)).build();
         mapper = new ObjectMapper();
+        inFlight = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -62,7 +68,13 @@ public class InferenceAsyncFunction extends RichAsyncFunction<FeatureVector, Pre
                 .build();
         final long tSent = System.currentTimeMillis();
         final int subtask = getRuntimeContext().getTaskInfo().getIndexOfThisSubtask();
-        client.sendAsync(req, HttpResponse.BodyHandlers.ofString()).whenComplete((resp, err) -> {
+        CompletableFuture<HttpResponse<String>> future = client.sendAsync(req, HttpResponse.BodyHandlers.ofString());
+        inFlight.put(fv, future);
+        future.whenComplete((resp, err) -> {
+            inFlight.remove(fv);
+            if (err instanceof java.util.concurrent.CancellationException) {
+                return; // timed out at the operator; timeout() already completed the result
+            }
             Prediction p = new Prediction();
             p.window = fv;
             p.tInferenceSentMs = tSent;
@@ -96,6 +108,10 @@ public class InferenceAsyncFunction extends RichAsyncFunction<FeatureVector, Pre
 
     @Override
     public void timeout(FeatureVector fv, ResultFuture<Prediction> result) {
+        CompletableFuture<?> f = inFlight.remove(fv);
+        if (f != null) {
+            f.cancel(true);
+        }
         Prediction p = new Prediction();
         p.window = fv;
         p.status = "timeout";

@@ -123,7 +123,7 @@ def summarize_poller(rows: list[dict]) -> dict:
     cpu: dict[str, float] = defaultdict(float)
     for r in rows:
         for v in r.get("flink", {}).get("vertices", []):
-            name = v.get("name", "?")
+            name = v.get("name", "?").split(" -> ")[0].replace("Source: ", "")
             bp[name] = max(bp[name], float(v.get("backPressuredTimeMsPerSecond", 0) or 0))
             busy[name] = max(busy[name], float(v.get("busyTimeMsPerSecond", 0) or 0))
             if v.get("pendingRecords") is not None:
