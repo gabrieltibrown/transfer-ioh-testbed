@@ -4,7 +4,12 @@ import numpy as np
 import pytest
 
 from ioh_testbed.benchmark.reference import (
-    compare, dwc_ms, expected_fired, physical, reference_windows, window_starts,
+    compare,
+    dwc_ms,
+    expected_fired,
+    physical,
+    reference_windows,
+    window_starts,
 )
 from ioh_testbed.replay.config import RunConfig, Scenario, Workload
 from ioh_testbed.replay.reader import VitalDBSource

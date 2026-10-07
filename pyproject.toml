@@ -37,6 +37,8 @@ line-length = 100
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# e2e needs a finished run folder and is opt-in: `uv run pytest -m e2e`
+addopts = "-m 'not e2e'"
 markers = [
     "vitaldb: needs the cached VitalDB cases under data/ (gitignored); skipped otherwise",
     "kafka: needs the docker compose Kafka broker running",

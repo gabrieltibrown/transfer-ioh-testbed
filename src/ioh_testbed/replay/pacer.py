@@ -153,7 +153,7 @@ class Pacer:
         spin_s: float = 0.002,
         clock: Callable[[], float] = time.monotonic,
         wall: Callable[[], float] = time.time,
-        sleep: Callable[[float], "asyncio.Future"] = asyncio.sleep,
+        sleep: Callable[[float], asyncio.Future] = asyncio.sleep,
         spin: Callable[[float], None] | None = None,
         flush_timeout_s: float = 30.0,
     ):

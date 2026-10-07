@@ -30,7 +30,7 @@ from ..replay.schedule import Schedule, StreamEmitter
 
 def dwc_ms(epoch_s: float) -> int:
     """Epoch ms exactly as a consumer recovers it from the DWC string timestamp."""
-    return int(round(parse_dwc_ts(format_dwc_ts(epoch_s)) * 1000))
+    return round(parse_dwc_ts(format_dwc_ts(epoch_s)) * 1000)
 
 
 @dataclass
@@ -123,7 +123,7 @@ def emitter_records(em: StreamEmitter, case_t_start: float, t0_wall: float, spee
             skip[p.invalid] = True
             skip[p.unavailable] = True
             vals = physical(raw[~skip].astype(float), em.stream.gain, em.stream.bias)
-            t_last = t_first + int(round((p.n - 1) * 1000.0 / p.srate))
+            t_last = t_first + round((p.n - 1) * 1000.0 / p.srate)
             out.append(RefRecord(em.case_id, em.label, WAVE, t_first, t_last, vals, int(skip.sum())))
         else:
             out.append(RefRecord(em.case_id, em.label, "numeric", t_first, t_first, np.array([float(e.payload)])))

@@ -41,7 +41,7 @@ class Emission:
 class StreamEmitter:
     """One (case, label) stream. ``current`` is the next emission due."""
 
-    __slots__ = ("case_id", "label", "kind", "unit", "stream", "_items", "current", "n_emitted")
+    __slots__ = ("_items", "case_id", "current", "kind", "label", "n_emitted", "stream", "unit")
 
     def __init__(
         self,

@@ -7,8 +7,8 @@ import numpy as np
 import pytest
 
 from ioh_testbed.replay.config import WAVE
-from ioh_testbed.replay.packetize import WavePacket
 from ioh_testbed.replay.pacer import TOPIC_NUMERIC, TOPIC_WAVE, NullSink, Pacer, RunStats
+from ioh_testbed.replay.packetize import WavePacket
 from ioh_testbed.replay.reader import SampleStream
 from ioh_testbed.replay.schedule import CasePlan, Emission, Schedule, StreamEmitter
 

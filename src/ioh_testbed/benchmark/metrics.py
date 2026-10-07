@@ -82,7 +82,7 @@ def progress_lag(h: dict, clock: Clock) -> float:
 
 
 def percentiles(x, qs=(50, 90, 99)) -> dict:
-    a = np.asarray([v for v in x if v == v], dtype=float)  # drop NaN
+    a = np.asarray([v for v in x if not np.isnan(v)], dtype=float)  # drop NaN
     if a.size == 0:
         return {"N": 0}
     d = {"N": int(a.size)}

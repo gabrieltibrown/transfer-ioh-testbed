@@ -21,7 +21,7 @@ from __future__ import annotations
 import json
 import math
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 
 import numpy as np
 
@@ -39,7 +39,7 @@ _DWC_TS_FMT = "%Y-%m-%d %H:%M:%S.%f"
 
 def format_dwc_ts(epoch_s: float) -> str:
     """DWC string timestamp, always UTC, millisecond precision: '2024-09-26 23:41:53.480 +00:00'."""
-    dt = datetime.fromtimestamp(epoch_s, tz=timezone.utc)
+    dt = datetime.fromtimestamp(epoch_s, tz=UTC)
     return dt.strftime(_DWC_TS_FMT)[:-3] + " +00:00"
 
 
