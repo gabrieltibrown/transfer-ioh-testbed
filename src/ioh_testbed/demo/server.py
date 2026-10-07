@@ -34,6 +34,7 @@ from fastapi.staticfiles import StaticFiles
 from ..benchmark import pipeline as pl
 from ..benchmark.poller import FlinkMetrics
 from ..replay.config import Scenario, Workload
+from .snapshot import EventLog, History, render_text, take_snapshot
 from .tap import BedState, Tap
 
 REPO = Path(__file__).resolve().parents[3]
@@ -135,6 +136,10 @@ class Demo:
         self.logs = results / "logs"
         self.logs.mkdir(parents=True, exist_ok=True)
         self._stop = threading.Event()
+        self.history = History()
+        self.events = EventLog(results / "events.jsonl")
+        self.snapshot_path = results / "snapshot.json"
+        self.events.add("server_start", pipeline_config=str(pipeline_cfg), bootstrap=bootstrap)
 
     # ------------------------------------------------------------ lifecycle
 
@@ -169,6 +174,7 @@ class Demo:
             self.apply(self.shared)
         except Exception as e:  # noqa: BLE001
             self.pipeline_status["message"] = f"apply failed: {e}"
+            self.events.add("apply_failed", error=str(e))
 
     # ------------------------------------------------------------ shared settings
 
@@ -176,9 +182,11 @@ class Demo:
         """Stop all beds, restart the stub and resubmit the Flink job with ``shared``."""
         shared.validate()
         with self.lock:
+            stopped = [b.index for b in self.beds if b.status == "running"]
             for b in self.beds:
                 self._stop_bed(b)
             self.shared = shared
+            self.events.add("apply", shared=asdict(shared), stopped_beds=stopped)
             self.event_origin = time.time()
             self.pipeline_status["message"] = "applying settings"
             pl.stop(self.stub_proc, "stub")
@@ -196,6 +204,7 @@ class Demo:
             self.job_config = cfg
             self.pipeline_status.update({"flink": True, "job_state": "RUNNING", "message": ""})
             self.metrics_reader = FlinkMetrics(self.fl["rest"], self.job_id)
+            self.events.add("job_running", job_id=self.job_id, job_config=cfg)
 
     # ------------------------------------------------------------ beds
 
@@ -230,12 +239,16 @@ class Demo:
                    "--tolerance-ms", "1000000", "--invalid-ms", "1000000"]
             bed.proc = pl.start(cmd, self.logs / f"bed{index}.log")
             bed.status, bed.message = "running", ""
+            self.events.add("play", bed=index, case=int(case), grain=grain, start_at=float(start_at),
+                            key=bed.key, speed=self.shared.speed)
             return bed
 
     def stop(self, index: int) -> Bed:
         with self.lock:
             bed = self.beds[index]
+            was = bed.status
             self._stop_bed(bed)
+            self.events.add("stop", bed=index, previous_status=was, key=bed.key)
             return bed
 
     def _stop_bed(self, bed: Bed) -> None:
@@ -253,6 +266,8 @@ class Demo:
                 rc = b.proc.returncode
                 b.status = "done" if rc == 0 else "error"
                 b.message = "" if rc == 0 else f"replay exited with {rc}, see logs/bed{b.index}.log"
+                self.events.add("bed_exit", bed=b.index, key=b.key, returncode=rc,
+                                log_tail=_tail(self.logs / f"bed{b.index}.log") if rc else None)
 
     # ------------------------------------------------------------ status
 
@@ -288,9 +303,35 @@ class Demo:
                     self.metrics["stub"] = r.json()
                 except Exception:  # noqa: BLE001
                     self.pipeline_status["stub"] = False
+                self._record_history()
             except Exception as e:  # noqa: BLE001
                 self.pipeline_status["message"] = str(e)
+                self.events.add("status_error", error=str(e))
             self._stop.wait(2.0)
+
+    def _record_history(self) -> None:
+        snap = self.snapshot()
+        self.history.add(snap)
+        try:
+            self.snapshot_path.write_text(dumps({**snap, "history": self.history.series(), "events": self.events.recent()}))
+        except Exception:  # noqa: BLE001
+            pass
+
+    def bed_stats(self) -> list[dict]:
+        out = []
+        if self.tap is None:
+            return out
+        with self.tap.lock:
+            for b in self.beds:
+                if b.state is not None and b.status in ("running", "done", "error"):
+                    st = b.state.stats(self.shared.window_ms / 1000.0, self.shared.slide_ms / 1000.0)
+                    st["bed"] = b.index
+                    st["recent_predictions"] = list(b.state.predictions)[-24:]
+                    out.append(st)
+        return out
+
+    def snapshot(self) -> dict:
+        return take_snapshot(self.state(), self.bed_stats())
 
     def state(self) -> dict:
         return {
@@ -346,6 +387,14 @@ def make_app(demo: Demo) -> FastAPI:
     @app.get("/api/state")
     def state():
         return demo.state()
+
+    @app.get("/api/snapshot")
+    def snapshot(format: str = "json"):
+        snap = {**demo.snapshot(), "history": demo.history.series(), "events": demo.events.recent()}
+        if format == "text":
+            from fastapi.responses import PlainTextResponse
+            return PlainTextResponse(render_text(snap))
+        return JSONResponse(json.loads(dumps(snap)))
 
     @app.post("/api/config")
     async def config(body: dict):
@@ -407,6 +456,13 @@ def _json_default(o):
     if isinstance(o, set):
         return sorted(o)
     raise TypeError(type(o))
+
+
+def _tail(path: Path, n: int = 8) -> list[str]:
+    try:
+        return path.read_text(errors="replace").splitlines()[-n:]
+    except OSError:
+        return []
 
 
 def sanitize(o):

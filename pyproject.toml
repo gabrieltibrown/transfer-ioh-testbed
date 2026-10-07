@@ -23,6 +23,7 @@ ioh-stub = "ioh_testbed.inference.stub:main"
 ioh-interface = "ioh_testbed.interface.consumer:main"
 ioh-run = "ioh_testbed.benchmark.run:main"
 ioh-demo = "ioh_testbed.demo.server:main"
+ioh-demo-snapshot = "ioh_testbed.demo.snapshot:main"
 
 [dependency-groups]
 dev = ["pytest>=8.0", "ruff>=0.6", "httpx>=0.27"]

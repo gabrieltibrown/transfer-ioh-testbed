@@ -183,18 +183,13 @@ class BedState:
         t_wall = rec["tWallMs"] / 1000.0 - offset_s
         self.progress.append((t_wall, t_wall - rec["tEventNewestSeenMs"] / 1000.0, rec.get("recordsSeen", 0)))
 
-    def frame(self, window_s: float, slide_s: float, now: float | None = None, delta: bool = True) -> dict:
+    def stats(self, window_s: float, slide_s: float, now: float | None = None) -> dict:
+        """Everything the page shows except the waveform and numeric series. Does
+        not consume frame deltas, so the snapshot endpoint can call it freely."""
         now = now or time.time()
         recent = [x for x in self.recent_ingress if now - x[0] <= 30.0]
         elapsed_patient = (self.last_event - self.first_event) if self.first_event is not None and self.last_event else 0.0
         due = records_due(elapsed_patient, self.channel_rates, self.channels_seen)
-        if delta:
-            waves, numerics, preds = self.new_waves, self.new_numerics, self.new_predictions
-            self.new_waves, self.new_numerics, self.new_predictions = [], [], []
-        else:
-            waves = [p for d in self.waves.values() for p in d]
-            numerics = [[label, round(t, 3), v] for label, d in self.numerics.items() for t, v in d]
-            preds = list(self.predictions)
         preds_ok = [p for p in self.predictions if p["status"] == "ok" and not p["partial"]]
         n_due = windows_due(self.last_event, self.first_event, window_s, slide_s) if self.first_event is not None and self.last_event else 0
         n_full = sum(1 for p in self.predictions if not p["partial"])
@@ -204,8 +199,6 @@ class BedState:
             "first_event": self.first_event,
             "last_event": self.last_event,
             "elapsed_patient_s": elapsed_patient,
-            "waves": waves,
-            "numerics": numerics,
             "units": self.units,
             "ingress": {
                 "n_records": self.n_records,
@@ -220,7 +213,6 @@ class BedState:
                 "channels": sorted(self.channels_seen),
                 "channels_expected": sorted(self.channel_rates),
             },
-            "predictions": preds,
             "prediction_stats": {
                 "n": len(self.predictions),
                 "n_full": n_full,
@@ -234,6 +226,18 @@ class BedState:
             },
             "progress_lag_s": prog[1] if prog else None,
         }
+
+    def frame(self, window_s: float, slide_s: float, now: float | None = None, delta: bool = True) -> dict:
+        out = self.stats(window_s, slide_s, now)
+        if delta:
+            waves, numerics, preds = self.new_waves, self.new_numerics, self.new_predictions
+            self.new_waves, self.new_numerics, self.new_predictions = [], [], []
+        else:
+            waves = [p for d in self.waves.values() for p in d]
+            numerics = [[label, round(t, 3), v] for label, d in self.numerics.items() for t, v in d]
+            preds = list(self.predictions)
+        out.update({"waves": waves, "numerics": numerics, "predictions": preds})
+        return out
 
 
 # ---------------------------------------------------------------- consumer thread
