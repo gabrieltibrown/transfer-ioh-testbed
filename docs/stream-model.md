@@ -214,7 +214,7 @@ limitation is recorded here and in the sprint report.
 
 | # | Gap | Transformation |
 |---|---|---|
-| T1 | 1 s source blocks vs `packet_ms` | Treat each track as a continuous sample stream (block `dt` plus `i/srate`), re-packetise on fixed `packet_ms` boundaries, carry the remainder across source-block edges. Mandatory for 256 ms (1000/256 is not integral) and for any gap; exact for 10000 |
+| T1 | 1 s source blocks vs `packet_ms` | Treat each track as a continuous sample stream (block `dt` plus `i/srate`), re-packetise on fixed `packet_ms` boundaries, carry the remainder across source-block edges. Mandatory for 256 ms (1000/256 is not integral) and for any gap; exact for 10000. A packet is **emitted when complete**, `packet_ms` after its first sample, and carries both `_event_ts` (first sample) and `_event_ts_last` |
 | T2 | ART, PLETH at 500 sps vs 125 | Decimate 4:1 by integer stride. **No anti-alias filter**; load fidelity is the goal. Recorded as a limitation |
 | T3 | ECG at 500; AWP, CO2 at 62.5 | Pass through |
 | T4 | Numerics at 0.5 / 0.157 Hz vs 1 Hz | Zero-order hold to 1 Hz, the semantics a monitor already has for an unrefreshed value |
@@ -282,7 +282,8 @@ assertion is parametric in `packet_ms` and runs at both 10000 and 256.
 **Packet shape**
 - every wave packet carries exactly `packet_ms * target_hz / 1000` samples:
   5000 / 1250 / 625 at 10 s, 128 / 32 / 16 at 256 ms
-- packet inter-arrival in event time is `packet_ms`, per track
+- packet inter-arrival in event time is `packet_ms`, per track, and each packet
+  is emitted `packet_ms` after its first-sample event time
 - remainder carry: no short packets at source-block boundaries, no sample
   duplicated or dropped across a boundary
 - total samples emitted equals total samples read divided by stride, exactly

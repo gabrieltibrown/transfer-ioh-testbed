@@ -24,8 +24,18 @@ from .reader import SampleStream, Source
 
 @dataclass(frozen=True)
 class Emission:
-    t_rel: float  # seconds since case start, in source time
+    """``t_rel`` is when the record is emitted, ``t_event_rel`` the event time it
+    carries (its first sample), both in seconds since case start in source time.
+    They differ for wave packets: a monitor can only export a packet once its last
+    sample exists, so a packet is emitted ``packet_ms`` after its first sample."""
+
+    t_rel: float
     payload: Any  # WavePacket for waves, float for numerics
+    t_event_rel: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.t_event_rel is None:
+            object.__setattr__(self, "t_event_rel", self.t_rel)
 
 
 class StreamEmitter:
@@ -121,10 +131,13 @@ def build_schedule(
         for t in profile.tracks:
             if t.kind == WAVE and t.source in data.waves:
                 s = data.waves[t.source]
+                # Emitted at the end of the packet's span; cropped by emission time, so
+                # the last packet of a window is the one that completes inside it.
+                span = packet_ms / 1000.0
                 items = (
-                    Emission(p.t0 - data.t_start, p)
+                    Emission(p.t0 + span - data.t_start, p, p.t0 - data.t_start)
                     for p in packetize_wave(s, packet_ms, t.target_hz)
-                    if p.t0 - data.t_start < window
+                    if p.t0 + span - data.t_start < window
                 )
                 emitters.append(StreamEmitter(case_id, t.label, WAVE, s.unit, s, items))
             elif t.kind == NUMERIC and t.source in data.numerics:

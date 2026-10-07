@@ -41,9 +41,23 @@ def test_all_streams_of_a_case_share_one_origin(tmp_path, vitaldb_case_factory):
     by_label = {e.label: e for e in case.emitters}
     for e in by_label.values():
         assert e.advance()
-    assert by_label["ART"].current.t_rel == pytest.approx(0.0)
-    assert by_label["ECG_II"].current.t_rel == pytest.approx(3.0)
-    assert by_label["HR"].current.t_rel == pytest.approx(5.0)
+    assert by_label["ART"].current.t_event_rel == pytest.approx(0.0)
+    assert by_label["ECG_II"].current.t_event_rel == pytest.approx(3.0)
+    assert by_label["HR"].current.t_event_rel == pytest.approx(5.0)
+
+
+def test_wave_packets_are_emitted_when_complete(tmp_path, vitaldb_case_factory):
+    # A packet whose first sample is at t can only exist at t + packet_ms.
+    vitaldb_case_factory("1.parquet", waves={"SNUADC/ART": {**ART, "blocks": blocks(1000.0, 500, 40)}},
+                         numerics={"Solar8000/HR": {"unit": "/min", "points": [(1000.0, 80)]}})
+    cfg = RunConfig(small_workload(tmp_path), scenario(10000))
+    case = build_schedule(cfg, VitalDBSource(tmp_path), [{"caseid": 1, "duration_s": 40}], 1).cases[0]
+    by_label = {e.label: e for e in case.emitters}
+    for e in by_label.values():
+        assert e.advance()
+    assert by_label["ART"].current.t_event_rel == pytest.approx(0.0)
+    assert by_label["ART"].current.t_rel == pytest.approx(10.0)
+    assert by_label["HR"].current.t_rel == by_label["HR"].current.t_event_rel == pytest.approx(0.0)
 
 
 def test_window_truncates_emissions(tmp_path, vitaldb_case_factory):
@@ -56,7 +70,7 @@ def test_window_truncates_emissions(tmp_path, vitaldb_case_factory):
     while em.advance():
         assert em.current.t_rel < 30
         n += 1
-    assert n == 118  # k * 0.256 < 30  ->  k <= 117
+    assert n == 117  # emitted at (k + 1) * 0.256 < 30  ->  k <= 116
 
 
 def test_window_crop_still_yields_full_packets_at_10s(tmp_path, vitaldb_case_factory):
@@ -67,7 +81,7 @@ def test_window_crop_still_yields_full_packets_at_10s(tmp_path, vitaldb_case_fac
     pk = []
     while em.advance():
         pk.append(em.current.payload)
-    assert len(pk) == 3 and all(p.n == 5000 and p.unavailable.size == 0 for p in pk)
+    assert len(pk) == 2 and all(p.n == 5000 and p.unavailable.size == 0 for p in pk)  # complete by 10 s, 20 s
 
 
 def test_missing_source_is_recorded_and_other_streams_proceed(tmp_path, vitaldb_case_factory):

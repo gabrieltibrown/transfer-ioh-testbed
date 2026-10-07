@@ -204,7 +204,7 @@ class Pacer:
 
             t_sched_wall = t0_wall + d_rel
             t_produce_wall = t0_wall + (now - t0_mono)
-            event_ts = t0_wall + em.current.t_rel / speed
+            event_ts = t0_wall + em.current.t_event_rel / speed
             seq = seqs.next(em.case_id, em.label)
             if em.kind == WAVE:
                 topic = TOPIC_WAVE

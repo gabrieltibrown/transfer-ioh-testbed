@@ -133,7 +133,20 @@ def test_record_timing_fields_are_consistent():
         assert r["_t_produce"] >= r["_t_sched"]
         assert r["_t_produce"] - r["_t_sched"] == pytest.approx(0.002, abs=1e-6)
     for r in [first, *rest]:
-        assert r["_event_ts"] == pytest.approx(r["_t_sched"])  # speed 1: event time == schedule time
+        assert r["_event_ts"] == pytest.approx(r["_t_sched"])  # synthetic emitter: event time == emit time
+        assert r["_event_ts_last"] == pytest.approx(r["_event_ts"] + 127 / 500.0)
+
+
+def test_event_time_is_taken_from_t_event_rel_not_the_deadline():
+    clock = SimClock()
+    sink = CapturingSink()
+    pk = WavePacket("SNUADC/ART", 0.0, 500.0, np.zeros(5000), np.empty(0, int), np.empty(0, int))
+    items = (Emission(10.0 * (i + 1), pk, 10.0 * i) for i in range(3))
+    em = StreamEmitter("1", "ART", WAVE, "mmHg", wave_stream(), items)
+    run(schedule([em], packet_ms=10000), sink, clock)
+    for _, _, r in sink.records:
+        assert r["_t_sched"] - r["_event_ts"] == pytest.approx(10.0)
+        assert r["_event_ts_last"] == pytest.approx(r["_event_ts"] + 4999 / 500.0)
 
 
 def test_speed_compresses_deadlines_and_event_time_together():

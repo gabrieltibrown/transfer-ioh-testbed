@@ -7,6 +7,8 @@ only the reader. Testbed-specific fields carry a leading underscore, as LIVIA's
 own ``_source`` / ``_ingest_ts`` do. Timing is split explicitly:
 
     _event_ts   rebased event time of the first sample (epoch seconds)
+    _event_ts_last  event time of the last sample in a wave packet; the newest
+                evidence a consumer holds once the packet arrives
     _t_sched    the harness's scheduled emission deadline
     _t_produce  wall time when the record was handed to the producer
 
@@ -98,6 +100,7 @@ def wave_record(
         "_source": SOURCE_TAG,
         "_packet_ms": packet_ms,
         "_event_ts": event_ts,
+        "_event_ts_last": event_ts + (pkt.n - 1) / pkt.srate,
         "_t_sched": t_sched,
         "_t_produce": t_produce,
     }
