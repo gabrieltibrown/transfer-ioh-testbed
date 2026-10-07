@@ -126,7 +126,10 @@ class Flink:
         if parallelism and parallelism > 0:
             body["parallelism"] = parallelism
         r = self.c.post(f"{self.rest}/jars/{jar_id}/run", json=body)
-        r.raise_for_status()
+        if r.status_code >= 400:
+            errs = r.json().get("errors", [r.text]) if r.headers.get("content-type", "").startswith("application/json") else [r.text]
+            causes = [line.strip() for line in "\n".join(errs).splitlines() if "Caused by" in line]
+            raise RuntimeError(f"job submission failed ({r.status_code}): " + (causes[-1] if causes else errs[0][:500]))
         return r.json()["jobid"]
 
     def job(self, jid: str) -> dict:

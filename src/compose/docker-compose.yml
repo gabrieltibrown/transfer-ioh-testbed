@@ -64,10 +64,23 @@ services:
         /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --describe
     restart: "no"
 
+  # Named volumes are created root-owned; Flink runs as user flink (9999).
+  flink-init:
+    image: ${FLINK_IMAGE}
+    container_name: ioh-flink-init
+    user: root
+    entrypoint: ["/bin/sh", "-c", "chown -R flink:flink /flink-checkpoints"]
+    volumes:
+      - flink-checkpoints:/flink-checkpoints
+    restart: "no"
+
   flink-jobmanager:
     image: ${FLINK_IMAGE}
     container_name: ioh-flink-jm
     command: jobmanager
+    depends_on:
+      flink-init:
+        condition: service_completed_successfully
     ports:
       - "8081:8081"
     environment:

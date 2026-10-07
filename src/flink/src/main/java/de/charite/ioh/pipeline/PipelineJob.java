@@ -4,6 +4,8 @@ import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.connector.base.DeliveryGuarantee;
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema;
 import org.apache.flink.connector.kafka.sink.KafkaSink;
+import de.charite.ioh.pipeline.JsonSerializers.PredictionSerializer;
+import de.charite.ioh.pipeline.JsonSerializers.ProgressSerializer;
 import org.apache.flink.connector.kafka.source.KafkaSource;
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer;
 import org.apache.flink.streaming.api.datastream.AsyncDataStream;
@@ -14,7 +16,6 @@ import org.apache.flink.streaming.api.windowing.assigners.SlidingEventTimeWindow
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
@@ -67,7 +68,7 @@ public final class PipelineJob {
                 .name("progress");
 
         tracked.getSideOutput(ProgressFunction.PROGRESS)
-                .sinkTo(sink(cfg, cfg.progressTopic, Json::progress, p -> p.caseId))
+                .sinkTo(sink(cfg, new ProgressSerializer(cfg.progressTopic)))
                 .name("progress-sink");
 
         DataStream<FeatureVector> features = tracked
@@ -83,32 +84,20 @@ public final class PipelineJob {
                 cfg.inferenceCapacity).name("inference");
 
         predictions
-                .sinkTo(sink(cfg, cfg.predictionsTopic, Json::prediction, p -> p.window.caseId))
+                .sinkTo(sink(cfg, new PredictionSerializer(cfg.predictionsTopic)))
                 .name("predictions-sink");
 
         env.execute("ioh-pipeline " + cfg.runId);
     }
 
-    interface Encoder<T> extends java.io.Serializable {
-        byte[] apply(T t);
-    }
-
-    interface KeyOf<T> extends java.io.Serializable {
-        String apply(T t);
-    }
-
-    private static <T> KafkaSink<T> sink(JobConfig cfg, String topic, Encoder<T> enc, KeyOf<T> key) {
+    private static <T> KafkaSink<T> sink(JobConfig cfg, KafkaRecordSerializationSchema<T> serializer) {
         Properties props = new Properties();
         props.setProperty("linger.ms", "0");
         return KafkaSink.<T>builder()
                 .setBootstrapServers(cfg.bootstrap)
                 .setKafkaProducerConfig(props)
                 .setDeliveryGuarantee(DeliveryGuarantee.NONE)
-                .setRecordSerializer(KafkaRecordSerializationSchema.<T>builder()
-                        .setTopic(topic)
-                        .setKeySerializationSchema(t -> key.apply(t).getBytes(StandardCharsets.UTF_8))
-                        .setValueSerializationSchema(enc::apply)
-                        .build())
+                .setRecordSerializer(serializer)
                 .build();
     }
 }
