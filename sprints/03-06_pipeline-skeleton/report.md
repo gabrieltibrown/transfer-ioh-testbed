@@ -53,7 +53,35 @@ and is measured end to end.
 
 ## Results
 
-RESULTS_PLACEHOLDER
+Six recorded runs on the laptop, all details in `findings.md`.
+
+**The skeleton is correct.** A 1-case 600 s run fired 30 windows and every one
+matched the offline reference exactly (`tests/test_e2e.py`).
+
+**The low-load floor on this laptop is 1.2 s, and it is windowing, not
+compute.** T_pipeline p50 1.23 s at one case: 0.5 s watermark bound, up to 1 s
+waiting for the next 1 Hz numeric, 80 ms for inference, sink and fetch
+together. With more cases the floor rose to 5 s because the 10 s waveform
+bursts hold the watermark for the idleness period; idleness 1 s brought the
+5-case p50 to 2.25 s. The floor relation now reads
+`bound + numeric granularity + min(idleness, packet period) + watermark interval`.
+This is the first measured coupling between the source cadence and pipeline
+latency and must be reported with RQ1.
+
+**The inference axis works as designed.** At capacity above demand (20 cases,
+stub 200 ms x2) all windows fired with a flat progress lag. At capacity below
+demand with no shedding (stub 2000 ms x1, operator timeout longer than the
+run), the async operator filled to 16 in flight, back-pressured the source at
+100%, inference round trips reached 28 s, half the windows never fired,
+T_pipeline p50 reached 200 s and per-case progress lag grew at 0.22 to 0.33 s/s
+with cases on different subtasks diverging (123, 163, 199 s): cross-case
+interference made visible by the per-case metric. With a 10 s operator
+timeout the same load was shed instead (400 timeouts, 196 errors), so the
+timeout decides whether saturation shows as latency or as loss.
+
+**Resources.** Everything fits in the 5 GB VM: peak TaskManager 1.66 GB under
+back-pressure, Kafka 1.03 GB, JobManager 0.74 GB. Harness verdict OK in every
+run. The definition of done is met on all six points.
 
 ## What sprint 03-06 leaves ready for weeks 7-8
 
