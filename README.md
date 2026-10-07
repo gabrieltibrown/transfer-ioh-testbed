@@ -22,10 +22,17 @@ questions and the full evaluation plan.
 ## Architecture
 
 ```
-replay harness ──► Kafka ──► Flink ──► inference stub ──► interface
-   [sprint 1]    [sprint 1]  [sprint 2]    [sprint 2]       [sprint 2]
-        └──────────────── end-to-end latency benchmark ────────────────┘
+replay harness ──► Kafka ──► Flink job ──► inference stub ──► interface consumer
+  ioh-replay     compose    src/flink      ioh-stub           ioh-interface
+        └──────────── ioh-run: clock probe, poller, meta.json, analysis ────────────┘
 ```
+
+All five stages exist as of sprint 03-06. The Flink job keys by case, computes a
+trailing 60 s feature window every 20 s of event time, calls the inference stub
+asynchronously with bounded capacity, and writes predictions and per-case
+progress heartbeats back to Kafka. The interface consumer stamps receipt time;
+`ioh-run` orchestrates one fully recorded run and `benchmark/analyze.py` turns it
+into the three headline metrics.
 
 The replay harness is **open-loop**: it emits every record at an absolute
 deadline regardless of how the pipeline behaves, so pipeline slowdown shows up
@@ -65,10 +72,20 @@ docker ps                 # ioh-kafka running; ioh-kafka-init exits after creati
 uv run pytest -m kafka    # round trip against the broker
 ```
 
-`laptop.env` holds the broker to 1.5 GB and 2 CPUs because the dev machine's
-Docker VM is 3.83 GB. Other hosts get their own profile with the same keys.
-Topics `dwc-waveform` and `dwc-numeric` are created by `kafka-init` with
-`LogAppendTime` and `KAFKA_PARTITIONS` partitions; auto-creation is disabled.
+`laptop.env` holds Kafka to 1.5 GB, the Flink JobManager to 1 GB and the
+TaskManager to 2 GB; Docker Desktop's VM must be set to at least 5 GB
+(Settings > Resources > Memory). Other hosts get their own profile with the same
+keys. Topics `dwc-waveform`, `dwc-numeric`, `predictions`, `progress` and
+`clock-probe` are created by `kafka-init` with `LogAppendTime` and
+`KAFKA_PARTITIONS` partitions; auto-creation is disabled. The Flink UI is at
+http://localhost:8081.
+
+The Flink job is built in a Maven container (no local JVM needed); the jar lands
+in `src/flink/target/` and `ioh-run` uploads it through the REST API:
+
+```bash
+docker compose --env-file src/compose/profiles/laptop.env -f src/compose/docker-compose.yml --profile build run --rm flink-build
+```
 
 Stop the broker when not in use; add `-v` to wipe its data, which is advisable
 after calibration sweeps (they write gigabytes):
@@ -77,7 +94,40 @@ after calibration sweeps (they write gigabytes):
 docker compose --env-file src/compose/profiles/laptop.env -f src/compose/docker-compose.yml down [-v]
 ```
 
-### A run
+### A pipeline run
+
+```bash
+uv run ioh-run \
+  --workload configs/workload/standard_anaesthesia.yaml \
+  --scenario configs/scenarios/dwc_10s.yaml \
+  --pipeline configs/pipeline/laptop.yaml \
+  --cases 5 --duration 600 [--stub-service-ms 200 --stub-workers 2 --inference-capacity 8]
+uv run python -m ioh_testbed.benchmark.analyze results/<run_id>   # re-print or re-run the analysis
+```
+
+A run is one workload, one scenario and one pipeline config. `ioh-run` probes
+the host-to-broker clock offset, starts the inference stub, resubmits the Flink
+job with this run's parameters (fresh state, fresh consumer group), starts the
+resource poller and the interface consumer, runs the replay harness open-loop,
+drains, stops everything, cancels the job, collects container logs and writes
+`results/<run_id>/`:
+
+| File | Content |
+|---|---|
+| `meta.json` | harness provenance and verdict, job config and id, stub config and final stats, clock offsets, image digests |
+| `predictions.jsonl` | one line per fired window after inference, with receipt time and broker append time |
+| `progress.jsonl` | per-case heartbeats (newest event time seen, watermark, records seen) |
+| `poller.jsonl` | 1 s samples: Flink vertex metrics, checkpoints, container memory and CPU, stub queue |
+| `summary.json` | the analysis: percentiles of every latency term, per-case progress-lag slopes |
+| `logs/` | harness, stub, interface, poller, JobManager and TaskManager logs |
+
+Metric definitions are in `src/ioh_testbed/benchmark/metrics.py` and must not
+drift: `T_pipeline = t_receipt - tAppendNewest`, `staleness = t_receipt -
+tEventNewest`, `progress_lag = tWall - tEventNewestSeen`, each with the measured
+clock offset removed. The latency floor includes the watermark bound by
+construction: `T_pipeline >= bound + emission granularity + watermark interval`.
+
+### A harness-only run
 
 ```bash
 uv run ioh-replay \
@@ -87,10 +137,10 @@ uv run ioh-replay \
 uv run python -m ioh_testbed.benchmark.stamp results/<run_id>    # provenance, verdict, percentiles
 ```
 
-A run is one workload and one scenario. It prints a JSON summary and writes
-`results/<run_id>/meta.json` (git commit and dirty flag, config SHA-256s, host
-and Docker descriptor, schedule, verdict, lateness percentiles) and
-`lateness_s.npy` (every lateness sample).
+Offers load into Kafka without the pipeline, for harness calibration and broker
+checks. It writes `results/<run_id>/meta.json` (git commit and dirty flag, config
+SHA-256s, host and Docker descriptor, schedule, verdict, lateness percentiles)
+and `lateness_s.npy` (every lateness sample).
 
 | Flag | Meaning |
 |---|---|
@@ -106,6 +156,38 @@ and Docker descriptor, schedule, verdict, lateness percentiles) and
 | `--spin-ms` | busy-wait window before each deadline (default 2); 0 disables |
 
 Exit codes: 0 for `OK` or `DEGRADED`, 2 for `INVALID`, 3 for a policy refusal.
+
+### Demo console
+
+A web page that runs four beds through the real pipeline: each bed replays one
+VitalDB case as a live monitor feed and draws its waveforms and numerics as they
+arrive, with ingress latency and completeness per bed, the prediction stream
+from the Flink job and the inference stub (risk, latency, completeness, status,
+per-case progress lag), and the pipeline's back-pressure and stub queue in the
+top bar. Shared settings (replay speed, window, inference time and variability,
+workers, what happens when inference falls behind, async capacity, watermark
+bound and idleness) restart the stub and resubmit the Flink job; presets
+reproduce the regimes measured in sprint 03-06.
+
+```bash
+docker compose --env-file src/compose/profiles/laptop.env -f src/compose/docker-compose.yml up -d --wait
+(cd src/ioh_testbed/demo/web && npm install && npm run build)   # once; Node 18+ required
+uv run ioh-demo                                                  # http://localhost:8080
+```
+
+Everything shown comes from the pipeline's own Kafka records through a tap
+consumer; the console measures nothing the benchmark does not. What the page
+shows (settings, pipeline gauges, every bed's statistics, a 10-minute history
+and an event log of plays, stops and applies, but not the waveforms) is also
+available without the page, for a second pair of eyes or a post-mortem:
+
+```bash
+uv run ioh-demo-snapshot                              # text report from the running server
+uv run ioh-demo-snapshot --json                       # the raw snapshot
+uv run ioh-demo-snapshot --file results/demo/snapshot.json   # refreshed every 2 s; readable after the server stops
+``` Bed replays
+write their harness metadata to `results/demo/` (gitignored). The console is a
+demonstration aid, not an experiment: the thesis numbers come from `ioh-run`.
 
 ### Harness calibration
 
@@ -141,17 +223,22 @@ With the sprint tag and the SHA-256s in `meta.json`, the number is reproducible.
 ## Repo layout
 
 - `src/ioh_testbed/` — the single evolving codebase. `replay/` (reader,
-  packetizer, wire records, schedule, pacer, Kafka sink, CLI), `benchmark/`
-  (run provenance). Git history is the source of truth; the pipeline is never
-  forked into per-week copies.
+  packetizer, wire records, schedule, pacer, Kafka sink, CLI), `inference/`
+  (the configurable stub), `interface/` (the minimal consumer), `benchmark/`
+  (metrics, orchestrator, poller, analysis, offline reference, provenance). Git
+  history is the source of truth; the pipeline is never forked into per-week
+  copies.
+- `src/flink/` — the Flink job (Java 17, Maven), built in a container.
 - `src/compose/` — infrastructure, with explicit resource limits per host profile.
-- `configs/` — `workload/` (sensor profiles, observation window) and
-  `scenarios/` (packet cadence). A run is one of each.
+- `configs/` — `workload/` (sensor profiles, observation window), `scenarios/`
+  (packet cadence) and `pipeline/` (window, watermark bound, inference capacity,
+  stub defaults). A run is one of each.
 - `docs/` — `stream-model.md` (production feed, VitalDB gap, bridge, test
   assertions) and `philips-data-egress.md` (every documented way to get data out
   of the Philips ecosystem, with citations).
-- `tests/` — synthetic fixtures; `-m vitaldb` and `-m kafka` opt into cached data
-  and a running broker.
+- `tests/` — synthetic fixtures; `-m vitaldb`, `-m kafka` and `-m e2e` opt into
+  cached data, a running broker, and a finished run folder respectively. Java
+  unit tests run inside the Maven build.
 - `sprints/NN-MM_topic/` — per-sprint deliverables (plan, findings, report,
   frozen configs, results). `NN-MM` is a thesis **week range**. Append-only,
   because `src/` is rewritten continuously: a week-9 result is unreproducible
@@ -161,6 +248,7 @@ With the sprint tag and the SHA-256s in `meta.json`, the number is reproducible.
 
 ## Status
 
-**Sprint 01-02 in progress.** Replay harness, Kafka, provenance and calibration
-are built and tested; see `sprints/01-02_replay-and-skeleton/`. Flink job,
-inference stub and interface sink are sprint 2.
+**Sprint 03-06 in progress.** The full path replay, Kafka, Flink, inference
+stub, interface exists and is measured end to end; see
+`sprints/03-06_pipeline-skeleton/`. Stability-criterion calibration and the
+concurrency and inference sweeps are weeks 7-12.

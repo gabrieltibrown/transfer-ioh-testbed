@@ -94,6 +94,8 @@ class RunStats:
     tolerance_ms: float
     invalid_ms: float
     spin_ms: float = 0.0
+    t0_wall: float = 0.0  # run origin on the host clock; window alignment downstream depends on it
+    event_origin: float | None = None  # shared epoch when event time runs at speed x wall (demo)
     per_case: dict[str, int] = field(default_factory=dict)
     per_kind: dict[str, int] = field(default_factory=dict)
     sink: dict = field(default_factory=dict)
@@ -135,6 +137,8 @@ class RunStats:
             "thresholds_ms": {"tolerance": self.tolerance_ms, "invalid": self.invalid_ms},
             "spin_ms": self.spin_ms,
             "speed": self.speed,
+            "t0_wall": self.t0_wall,
+            "event_origin": self.event_origin,
             "per_case": self.per_case,
             "per_kind": self.per_kind,
             "sink": self.sink,
@@ -151,7 +155,7 @@ class Pacer:
         spin_s: float = 0.002,
         clock: Callable[[], float] = time.monotonic,
         wall: Callable[[], float] = time.time,
-        sleep: Callable[[float], "asyncio.Future"] = asyncio.sleep,
+        sleep: Callable[[float], asyncio.Future] = asyncio.sleep,
         spin: Callable[[float], None] | None = None,
         flush_timeout_s: float = 30.0,
     ):
@@ -173,7 +177,12 @@ class Pacer:
         while self.clock() < deadline:
             pass
 
-    async def run(self, schedule: Schedule) -> RunStats:
+    async def run(self, schedule: Schedule, event_origin: float | None = None) -> RunStats:
+        """``event_origin``: when given, event time is ``origin + (t0_wall - origin) * speed
+        + t_event_rel``, i.e. it advances at ``speed`` times wall from a shared epoch,
+        so concurrent replays started at different times agree on event time and a
+        downstream window of N seconds is N seconds of patient time. Without it event
+        time is compressed onto wall time as in the benchmark runs."""
         speed = schedule.speed
         seqs = SequenceCounter()
         lateness: list[float] = []
@@ -202,9 +211,16 @@ class Pacer:
             late = now - deadline
             n_scheduled += 1
 
-            t_sched_wall = t0_wall + d_rel
-            t_produce_wall = t0_wall + (now - t0_mono)
-            event_ts = t0_wall + em.current.t_rel / speed
+            # Wall stamps are read from the wall clock at emission, not derived from
+            # the monotonic clock anchored at t0: the broker stamps with the wall clock,
+            # and a slewing host clock (after sleep, NTP) would otherwise show as a
+            # growing producer-to-broker delay. Lateness itself stays monotonic.
+            t_produce_wall = self.wall()
+            t_sched_wall = t_produce_wall - late
+            if event_origin is None:
+                event_ts = t0_wall + em.current.t_event_rel / speed
+            else:
+                event_ts = event_origin + (t0_wall - event_origin) * speed + em.current.t_event_rel
             seq = seqs.next(em.case_id, em.label)
             if em.kind == WAVE:
                 topic = TOPIC_WAVE
@@ -256,6 +272,8 @@ class Pacer:
             tolerance_ms=self.tolerance_ms,
             invalid_ms=self.invalid_ms,
             spin_ms=self.spin_s * 1000,
+            t0_wall=t0_wall,
+            event_origin=event_origin,
             per_case=per_case,
             per_kind=per_kind,
             sink=self.sink.stats(),

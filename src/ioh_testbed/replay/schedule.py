@@ -24,14 +24,24 @@ from .reader import SampleStream, Source
 
 @dataclass(frozen=True)
 class Emission:
-    t_rel: float  # seconds since case start, in source time
+    """``t_rel`` is when the record is emitted, ``t_event_rel`` the event time it
+    carries (its first sample), both in seconds since case start in source time.
+    They differ for wave packets: a monitor can only export a packet once its last
+    sample exists, so a packet is emitted ``packet_ms`` after its first sample."""
+
+    t_rel: float
     payload: Any  # WavePacket for waves, float for numerics
+    t_event_rel: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.t_event_rel is None:
+            object.__setattr__(self, "t_event_rel", self.t_rel)
 
 
 class StreamEmitter:
     """One (case, label) stream. ``current`` is the next emission due."""
 
-    __slots__ = ("case_id", "label", "kind", "unit", "stream", "_items", "current", "n_emitted")
+    __slots__ = ("_items", "case_id", "current", "kind", "label", "n_emitted", "stream", "unit")
 
     def __init__(
         self,
@@ -96,45 +106,74 @@ class Schedule:
         }
 
 
-def select_cases(manifest_cases: list[dict], n: int, window_s: float) -> list[dict]:
+def select_cases(
+    manifest_cases: list[dict], n: int, window_s: float, case_ids: list[int] | None = None,
+    start_s: float = 0.0,
+) -> list[dict]:
     """The first ``n`` manifest cases, in manifest order, that are at least one
-    observation window long. Deterministic, so a run is reproducible from its config."""
-    eligible = [c for c in manifest_cases if float(c.get("duration_s", 0.0)) >= window_s]
+    observation window long. Deterministic, so a run is reproducible from its config.
+    With ``case_ids`` those cases are taken instead, in the given order."""
+    need = start_s + window_s
+    if case_ids is not None:
+        by_id = {int(c["caseid"]): c for c in manifest_cases}
+        chosen = []
+        for cid in case_ids:
+            if cid not in by_id:
+                raise ValueError(f"case {cid} is not in the manifest")
+            if float(by_id[cid].get("duration_s", 0.0)) < need:
+                raise ValueError(f"case {cid} is shorter than start {start_s:g} s + window {window_s:g} s")
+            chosen.append(by_id[cid])
+        return chosen
+    eligible = [c for c in manifest_cases if float(c.get("duration_s", 0.0)) >= need]
     if len(eligible) < n:
         raise ValueError(
-            f"{n} cases requested but only {len(eligible)} in the manifest are >= {window_s:g} s long"
+            f"{n} cases requested but only {len(eligible)} in the manifest are >= {need:g} s long"
         )
     return eligible[:n]
 
 
 def build_schedule(
-    cfg: RunConfig, source: Source, manifest_cases: list[dict], n_cases: int
+    cfg: RunConfig,
+    source: Source,
+    manifest_cases: list[dict],
+    n_cases: int,
+    case_ids: list[int] | None = None,
+    key_suffix: str = "",
+    start_s: float = 0.0,
 ) -> Schedule:
+    """``key_suffix`` is appended to the case id used as Kafka key and ``p_patnr``,
+    so one recording can replay on two beds without sharing keyed state downstream.
+    ``start_s`` begins the replay that many seconds into each recording; every
+    stream is rebased from that point, keeping the shared-origin property."""
     window = float(cfg.workload.observation_window_s)
     packet_ms = cfg.scenario.packet_ms
     plans: list[CasePlan] = []
-    for rank, c in enumerate(select_cases(manifest_cases, n_cases, window)):
+    for rank, c in enumerate(select_cases(manifest_cases, n_cases, window, case_ids, start_s)):
         profile = cfg.workload.profile_for(rank)
-        case_id = str(c["caseid"])
-        data = source.read_case(c["caseid"], [t.source for t in profile.tracks], window_s=window)
+        case_id = f"{c['caseid']}{key_suffix}"
+        data = source.read_case(c["caseid"], [t.source for t in profile.tracks], window_s=window, start_s=start_s)
+        origin = data.t_start + start_s
         emitters: list[StreamEmitter] = []
         for t in profile.tracks:
             if t.kind == WAVE and t.source in data.waves:
                 s = data.waves[t.source]
+                # Emitted at the end of the packet's span; cropped by emission time, so
+                # the last packet of a window is the one that completes inside it.
+                span = packet_ms / 1000.0
                 items = (
-                    Emission(p.t0 - data.t_start, p)
+                    Emission(p.t0 + span - origin, p, p.t0 - origin)
                     for p in packetize_wave(s, packet_ms, t.target_hz)
-                    if p.t0 - data.t_start < window
+                    if p.t0 >= origin and p.t0 + span - origin < window  # samples from the origin on
                 )
                 emitters.append(StreamEmitter(case_id, t.label, WAVE, s.unit, s, items))
             elif t.kind == NUMERIC and t.source in data.numerics:
                 ns = data.numerics[t.source]
-                grid, vals = resample_numeric_zoh(ns, t.target_hz, t_end=data.t_start + window)
+                grid, vals = resample_numeric_zoh(ns, t.target_hz, t_end=origin + window)
                 items = (
-                    Emission(g - data.t_start, float(v))
+                    Emission(g - origin, float(v))
                     for g, v in zip(grid.tolist(), vals.tolist())
-                    if 0.0 <= g - data.t_start < window
+                    if 0.0 <= g - origin < window
                 )
                 emitters.append(StreamEmitter(case_id, t.label, NUMERIC, ns.unit, None, items))
-        plans.append(CasePlan(case_id, profile.name, data.t_start, emitters, data.missing, data.late_start))
+        plans.append(CasePlan(case_id, profile.name, origin, emitters, data.missing, data.late_start))
     return Schedule(plans, window, float(cfg.workload.speed), packet_ms)

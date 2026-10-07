@@ -157,7 +157,7 @@ def main(argv=None) -> int:
     env = meta["environment"]
     print(f"run       {meta['run_id']}")
     print(f"commit    {meta['git']['describe']}  dirty={meta['git']['dirty']}")
-    print(f"configs   " + ", ".join(f"{c['path']}@{c['sha256'][:10]}" for c in meta["config_files"]))
+    print("configs   " + ", ".join(f"{c['path']}@{c['sha256'][:10]}" for c in meta["config_files"]))
     print(f"cadence   packet_ms={meta['config']['packet_ms']}  scenario={meta['config']['scenario']}  "
           f"workload={meta['config']['workload']}  speed={meta['config']['speed']}")
     print(f"cases     {meta['schedule']['n_cases']} x {meta['schedule']['window_s']:g} s")

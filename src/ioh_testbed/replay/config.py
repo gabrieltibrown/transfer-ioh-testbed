@@ -95,7 +95,7 @@ class Scenario:
             raise ValueError("packet_ms must be positive")
 
     @classmethod
-    def load(cls, path: str | Path) -> "Scenario":
+    def load(cls, path: str | Path) -> Scenario:
         d = yaml.safe_load(Path(path).read_text())
         if "packet_ms" not in d:
             raise ValueError(f"{path}: scenario must state packet_ms explicitly; there is no default")
@@ -125,7 +125,7 @@ class Workload:
         return self.profiles[case_rank % len(self.profiles)]
 
     @classmethod
-    def load(cls, path: str | Path) -> "Workload":
+    def load(cls, path: str | Path) -> Workload:
         d = yaml.safe_load(Path(path).read_text())
         profiles = tuple(
             SensorProfile(

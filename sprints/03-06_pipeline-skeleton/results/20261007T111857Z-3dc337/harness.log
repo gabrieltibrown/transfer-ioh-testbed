@@ -1,0 +1,49 @@
+scheduled 5 cases, 58 streams, window 600 s, packet 10000 ms, built in 2.6 s
+wrote results/20261007T111857Z-3dc337/meta.json
+{
+  "run_id": "20261007T111857Z-3dc337",
+  "verdict": "OK",
+  "latency_results_valid": true,
+  "n_scheduled": 19665,
+  "n_emitted": 19665,
+  "n_backpressure": 0,
+  "n_undelivered": 0,
+  "duration_s": 599.813,
+  "offered_records_per_s": 32.79,
+  "lateness_ms": {
+    "N": 19665,
+    "p50": 0.255,
+    "p90": 0.805,
+    "p99": 9.891,
+    "max": 25.277,
+    "n_over_tolerance": 0
+  },
+  "thresholds_ms": {
+    "tolerance": 1000.0,
+    "invalid": 10000.0
+  },
+  "spin_ms": 2.0,
+  "speed": 1.0,
+  "t0_wall": 1791371948.1633909,
+  "per_case": {
+    "12": 3952,
+    "7": 3883,
+    "1": 3931,
+    "4": 3991,
+    "10": 3908
+  },
+  "per_kind": {
+    "wave": 1298,
+    "numeric": 18367
+  },
+  "sink": {
+    "sink": "kafka",
+    "bootstrap": "localhost:9092",
+    "acks": "all",
+    "linger_ms": 5,
+    "delivered": 19665,
+    "failed": 0,
+    "bytes": 20894768,
+    "last_error": null
+  }
+}

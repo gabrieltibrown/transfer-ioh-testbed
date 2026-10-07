@@ -1,11 +1,14 @@
-# Testbed infrastructure. Sprint 1: a single KRaft Kafka broker and topic init.
-# Flink, the inference stub and the interface sink arrive in sprint 2.
+# Testbed infrastructure: a single KRaft Kafka broker with topic init, and a
+# Flink session cluster (one JobManager, one TaskManager). The inference stub and
+# the interface consumer run on the host (ioh-stub, ioh-interface) so they do not
+# compete for Docker VM memory; Flink reaches the stub via host.docker.internal.
 #
-#   docker compose --env-file src/compose/profiles/laptop.env -f src/compose/docker-compose.yml up -d
+#   docker compose --env-file src/compose/profiles/laptop.env -f src/compose/docker-compose.yml up -d --wait
+#   docker compose --env-file ... -f ... --profile build run --rm flink-build   # builds src/flink/target/*.jar
 #
 # Resource limits are explicit so a run on the laptop, the Charite server and a
 # cloud VM can be made identical at the reference profile (docs/stream-model.md).
-# Record the image digest in the sprint findings after pulling.
+# Record image digests in the sprint findings after pulling.
 
 services:
   kafka:
@@ -16,13 +19,14 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      # The harness runs on the host in sprint 1; in-cluster clients come in sprint 2.
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      # Two client listeners: the host (harness, consumer) on localhost:9092 and
+      # in-cluster clients (Flink, kafka-init) on kafka:29092.
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,INTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,INTERNAL://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,INTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -52,10 +56,96 @@ services:
     command:
       - |
         set -e
-        for t in dwc-waveform dwc-numeric; do
-          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists \
+        for t in dwc-waveform dwc-numeric predictions progress clock-probe; do
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists \
             --topic "$$t" --partitions ${KAFKA_PARTITIONS} --replication-factor 1 \
             --config message.timestamp.type=LogAppendTime
         done
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --describe
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --describe
     restart: "no"
+
+  # Named volumes are created root-owned; Flink runs as user flink (9999).
+  flink-init:
+    image: ${FLINK_IMAGE}
+    container_name: ioh-flink-init
+    user: root
+    entrypoint: ["/bin/sh", "-c", "chown -R flink:flink /flink-checkpoints"]
+    volumes:
+      - flink-checkpoints:/flink-checkpoints
+    restart: "no"
+
+  flink-jobmanager:
+    image: ${FLINK_IMAGE}
+    container_name: ioh-flink-jm
+    command: jobmanager
+    depends_on:
+      flink-init:
+        condition: service_completed_successfully
+    ports:
+      - "8081:8081"
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        jobmanager.memory.process.size: ${FLINK_JM_MEM}
+        taskmanager.memory.process.size: ${FLINK_TM_MEM}
+        taskmanager.memory.managed.size: 0m
+        taskmanager.numberOfTaskSlots: ${FLINK_SLOTS}
+        parallelism.default: ${FLINK_PARALLELISM}
+        pipeline.auto-watermark-interval: ${FLINK_WATERMARK_INTERVAL}
+        state.backend.type: hashmap
+        execution.checkpointing.dir: file:///flink-checkpoints
+        web.upload.dir: /tmp/flink-web-upload
+        rest.flamegraph.enabled: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - flink-checkpoints:/flink-checkpoints
+    mem_limit: ${FLINK_JM_LIMIT}
+    cpus: ${FLINK_JM_CPUS}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/overview >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 10s
+
+  flink-taskmanager:
+    image: ${FLINK_IMAGE}
+    container_name: ioh-flink-tm
+    command: taskmanager
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      FLINK_PROPERTIES: |
+        jobmanager.rpc.address: flink-jobmanager
+        jobmanager.memory.process.size: ${FLINK_JM_MEM}
+        taskmanager.memory.process.size: ${FLINK_TM_MEM}
+        taskmanager.memory.managed.size: 0m
+        taskmanager.numberOfTaskSlots: ${FLINK_SLOTS}
+        parallelism.default: ${FLINK_PARALLELISM}
+        pipeline.auto-watermark-interval: ${FLINK_WATERMARK_INTERVAL}
+        state.backend.type: hashmap
+        execution.checkpointing.dir: file:///flink-checkpoints
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - flink-checkpoints:/flink-checkpoints
+    mem_limit: ${FLINK_TM_LIMIT}
+    cpus: ${FLINK_TM_CPUS}
+
+  # One-shot build of the Flink job jar on the host filesystem (src/flink/target).
+  # The jar is submitted through the JobManager REST API by ioh-run; no volume.
+  flink-build:
+    image: ${MAVEN_IMAGE}
+    container_name: ioh-flink-build
+    profiles: ["build"]
+    working_dir: /build
+    volumes:
+      - ../flink:/build
+      - m2-cache:/root/.m2
+    command: ["mvn", "-B", "-q", "package"]
+
+volumes:
+  flink-checkpoints:
+  m2-cache:
