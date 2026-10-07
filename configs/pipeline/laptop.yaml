@@ -1,0 +1,28 @@
+# Pipeline configuration for one run: the Flink job's parameters and the
+# inference stub's defaults. Together with a workload and a scenario this fully
+# determines a run; ioh-run records all three with their hashes.
+name: laptop
+flink:
+  rest: http://localhost:8081
+  bootstrap_in_cluster: kafka:29092
+  jar: src/flink/target/ioh-pipeline-0.2.0.jar
+  window_ms: 60000            # trailing window per case
+  slide_ms: 20000             # prediction cadence (HPI-like)
+  watermark_bound_ms: 500     # bounded out-of-orderness; an additive term in the latency floor
+  idleness_ms: 5000           # short: a 1-case run leaves most partitions idle
+  progress_interval_ms: 1000
+  inference_url: http://host.docker.internal:8000/predict
+  inference_capacity: 8       # per subtask; in-flight total = capacity x parallelism
+  inference_timeout_ms: 10000
+  checkpoint_ms: 10000
+  parallelism: 2
+stub:
+  port: 8000
+  service_ms: 50
+  service_cv: 0.0
+  workers: 4
+  queue_max: 1000
+  seed: 0
+run:
+  drain_s: 30                 # wait after the replay ends so the last windows fire and arrive
+  clock_probes: 20
