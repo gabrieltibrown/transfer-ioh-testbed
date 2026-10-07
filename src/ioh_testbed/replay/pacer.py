@@ -94,6 +94,7 @@ class RunStats:
     tolerance_ms: float
     invalid_ms: float
     spin_ms: float = 0.0
+    t0_wall: float = 0.0  # run origin on the host clock; window alignment downstream depends on it
     per_case: dict[str, int] = field(default_factory=dict)
     per_kind: dict[str, int] = field(default_factory=dict)
     sink: dict = field(default_factory=dict)
@@ -135,6 +136,7 @@ class RunStats:
             "thresholds_ms": {"tolerance": self.tolerance_ms, "invalid": self.invalid_ms},
             "spin_ms": self.spin_ms,
             "speed": self.speed,
+            "t0_wall": self.t0_wall,
             "per_case": self.per_case,
             "per_kind": self.per_kind,
             "sink": self.sink,
@@ -256,6 +258,7 @@ class Pacer:
             tolerance_ms=self.tolerance_ms,
             invalid_ms=self.invalid_ms,
             spin_ms=self.spin_s * 1000,
+            t0_wall=t0_wall,
             per_case=per_case,
             per_kind=per_kind,
             sink=self.sink.stats(),
